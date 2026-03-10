@@ -37,7 +37,12 @@ groups:
             help: Specify parameters to be used for tests
             type: string
             default: "-vv"
-        run: pytest ${{ args.path }} ${{ args.params }}
+        run: |
+          pytest \
+            --cov=slidemaker \
+            --cov-fail-under=95 \
+            --cov-report term-missing \
+            --no-cov-on-fail ${{ args.path }} ${{ args.params }}
 
       ci:
         help: run the sames tests executed on CI

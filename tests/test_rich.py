@@ -10,46 +10,10 @@ from slidemaker import SlideBuilder  # noqa: E402
 
 TEMPLATE = "tests/data/template.pptx"
 
-sb = SlideBuilder(TEMPLATE)
-
-sb.add_title(
-    title="LESSON 7.2",
-    subtitle="ETL Pipelines for Analytics",
-    notes="Welcome to lesson 7.2.",
-)
-
-sb.add_objectives(
-    items=[
-        "Explain the ETL paradigm and why it matters",
-        "Query MongoDB with date-based filters",
-        "Transform documents by assigning groups",
-        "Update documents back into MongoDB",
-        "Define a Python class with __init__",
-        "Build a reusable MongoRepository class",
-    ],
-)
-
-sb.add_toolkit(
-    items=[
-        "MongoClient connects to MongoDB",
-        "collection.find(query) returns a cursor",
-        "collection.aggregate([...]) runs pipelines",
-        "pd.DataFrame(list_of_dicts) converts documents",
-    ],
-)
-
-sb.add_whats_new(
-    items=[
-        "**ETL pattern**: Extract → Transform → Load as separate, testable stages",
-        "**Date-range queries**: using $gte and $lt in MongoDB",
-        "**update_one**: write modified fields back into the database",
-        "**Python classes**: bundle the full pipeline behind a clean interface",
-        "**Randomised group assignment**: with random.shuffle and random.seed",
-    ],
-)
+sb = SlideBuilder(TEMPLATE, default_template_page=4)
 
 # ── Flow diagram slide ──────────────────────────────────────
-sb.add_generic(
+sb.add_slide(
     title="The ETL Paradigm",
     flow_boxes=[
         {
@@ -68,12 +32,12 @@ sb.add_generic(
             "style": {"fill-color": "#E86F51"},
         },
     ],
-    callout=("Separating stages makes each one independently testable and swappable"),
+    callout="Separating stages makes each one independently testable and swappable",
     notes="ETL stands for Extract Transform Load.",
 )
 
 # ── Bullets + code block slide ──────────────────────────────
-sb.add_generic(
+sb.add_slide(
     title="Extract: Date-Range Queries in MongoDB",
     items=[
         "Convert date string to Timestamp with pd.to_datetime",
@@ -93,15 +57,15 @@ results = list(collection.find(query))""",
 )
 
 # ── Bullets + code block slide ──────────────────────────────
-sb.add_generic(
+sb.add_slide(
     title="Transform: Randomised Group Assignment",
     items=[
         "random.seed(42) makes the split reproducible",
         "random.shuffle(observations) reorders in place",
         "Integer division len(obs) // 2 finds the midpoint",
-        "First half → control, second half → treatment",
+        "First half -> control, second half -> treatment",
     ],
-    code='''random.seed(42)
+    code="""random.seed(42)
 random.shuffle(observations)
 mid = len(observations) // 2
 for doc in observations[:mid]:
@@ -109,12 +73,12 @@ for doc in observations[:mid]:
     doc["group"] = "no email (control)"
 for doc in observations[mid:]:
     doc["inExperiment"] = True
-    doc["group"] = "email (treatment)"''',
+    doc["group"] = "email (treatment)" """,
     notes="Transform step.",
 )
 
 # ── Bullets only slide ──────────────────────────────────────
-sb.add_generic(
+sb.add_slide(
     title="Transform: Exporting Treatment Emails to CSV",
     items=[
         "Convert assigned documents to DataFrame",
@@ -127,7 +91,7 @@ sb.add_generic(
 )
 
 # ── Bullets + code block slide ──────────────────────────────
-sb.add_generic(
+sb.add_slide(
     title="Load: Updating Documents with update_one",
     items=[
         "update_one(filter, update) modifies one document",
@@ -145,7 +109,7 @@ sb.add_generic(
 )
 
 # ── Bullets + code block slide ──────────────────────────────
-sb.add_generic(
+sb.add_slide(
     title="Python Classes: Bundling Data and Behaviour",
     items=[
         "A class groups attributes and methods into one object",
@@ -166,7 +130,7 @@ print(g.greet())""",
 )
 
 # ── Flow diagram slide ──────────────────────────────────────
-sb.add_generic(
+sb.add_slide(
     title="Building the MongoRepository Class",
     flow_boxes=[
         {
@@ -195,7 +159,7 @@ sb.add_generic(
 )
 
 # ── Bullets only slide ──────────────────────────────────────
-sb.add_generic(
+sb.add_slide(
     title="Inspecting Unfamiliar Objects with dir",
     items=[
         "dir(obj) lists all attributes and methods",
@@ -204,53 +168,6 @@ sb.add_generic(
         "Check raw_result for the full MongoDB response",
     ],
     notes="Object inspection.",
-)
-
-# ── Ending slides ───────────────────────────────────────────
-sb.add_checkpoints(
-    items=[
-        "After Extract: type is list, len > 0, _id in results[0]",
-        "After Transform: inExperiment and group in doc, two group labels exist",
-        'After Load: result["n"] matches len(obs), nModified is sensible',
-        "After CSV: file exists, columns [email, tag], row count matches",
-        "Re-running load: nModified == 0 is expected, not an error",
-    ],
-    notes="Validation.",
-)
-
-sb.add_exercise(
-    items=[
-        "Work through ETL stages in order",
-        "Write and test each standalone function first",
-        "Run checkpoint assertions after each step",
-        "If results look wrong, print intermediate outputs",
-        "Class methods reuse standalone function logic",
-    ],
-    notes="Strategy.",
-)
-
-sb.add_debugging(
-    items=[
-        '**Empty results from find?**: Check date format matches "%Y-%m-%d"',
-        "**KeyError on document?**: Print doc.keys(); field names are case-sensitive",
-        "**nModified is 0?**: Documents already updated; reset database and rerun",
-        "**Cursor exhausted?**: Re-run find() or aggregate(); cursors are single-use",
-        "**Class attribute missing?**: Ensure self.attr is set in __init__",
-    ],
-    notes="Debugging tips.",
-)
-
-sb.add_recap(
-    items=[
-        "ETL separates extraction, transformation, and loading into testable stages",
-        "Date-range queries use $gte / $lt with pandas Timestamps",
-        "update_one with $set persists new fields back into MongoDB",
-        "Python classes bundle related logic behind a clean interface",
-    ],
-    next_topic=(
-        "Use experimental data to perform hypothesis testing with a chi-square test"
-    ),
-    notes="Wrap up.",
 )
 
 sb.save("/tmp/test_rich_output.pptx")

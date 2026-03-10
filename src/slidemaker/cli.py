@@ -1,8 +1,8 @@
 """High-level API for building slide decks.
 
 ``SlideBuilder`` is the main entry point.  A user script creates
-an instance, calls one method per slide in order, and finally
-calls :meth:`save` to write the ``.pptx`` file.
+an instance, calls ``add_slide`` to clone and populate slides, and
+finally calls :meth:`save` to write the ``.pptx`` file.
 
 Example
 -------
@@ -11,15 +11,8 @@ Example
     from slidemaker.cli import SlideBuilder
 
     sb = SlideBuilder("template.pptx")
-    sb.add_title(title="LESSON 7.2", subtitle="ETL Pipelines")
-    sb.add_objectives(["Explain ETL", "Query MongoDB"])
-    sb.add_toolkit(["MongoClient", "pd.DataFrame"])
-    sb.add_whats_new(["Date-range queries", "update_one"])
-    sb.add_generic("The ETL Paradigm", ["Extract", "Transform"])
-    sb.add_checkpoints(["After Extract", "After Load"])
-    sb.add_exercise(["Work in order", "Test each step"])
-    sb.add_debugging(["Empty results?", "KeyError?"])
-    sb.add_recap(["ETL separates stages"], next_topic="Chi-sq")
+    sb.add_slide("The ETL Paradigm", items=["Extract", "Transform", "Load"])
+    sb.add_slide("Code Example", code="print('hello')")
     sb.save("output.pptx")
 """
 
@@ -38,29 +31,8 @@ from slidemaker.anchors import (
     generate_anchor_map,
     load_anchor_map,
 )
-from slidemaker.core import clone_slide, delete_slide, move_slide
-from slidemaker.template import (
-    slide_checkpoints,
-    slide_debugging,
-    slide_default,
-    slide_exercise,
-    slide_objectives,
-    slide_recap,
-    slide_title,
-    slide_toolkit,
-    slide_whats_new,
-)
-
-# Template slide indices (0-based)
-_IDX_TITLE = 0
-_IDX_OBJECTIVES = 1
-_IDX_TOOLKIT = 2
-_IDX_WHATS_NEW = 3
-_IDX_DEFAULT = 4
-_IDX_CHECKPOINTS = 5
-_IDX_EXERCISE = 6
-_IDX_DEBUGGING = 7
-_IDX_RECAP = 8
+from slidemaker.core import clone_slide, delete_slide
+from slidemaker.template import slide_default
 
 _SYSTEM_STYLES = {".slide", ".title", ".subtitle", ".code"}
 
@@ -69,12 +41,11 @@ StyleMap = dict[str, StyleAttrs]
 
 
 class SlideBuilder:
-    """Builds a slide deck from the branded template.
+    """Builds a slide deck from a PowerPoint template.
 
-    Slides are added in order by calling the ``add_*`` methods.
-    The four fixed-position ending slides (checkpoints, exercise,
-    debugging, recap) are held until :meth:`save` is called, so
-    they always appear at the end regardless of call order.
+    Each ``add_slide`` call clones the template's generic slide and
+    populates it with content.  Call :meth:`save` to assemble the
+    final deck.
 
     Attributes
     ----------
@@ -92,9 +63,8 @@ class SlideBuilder:
         """Load template, anchor map, styles, and prepare for building."""
         self._template_path = Path(template)
         self._prs = Presentation(str(self._template_path))
-        self._default_count = 0
-        # Deferred ending slides: stored as (func, kwargs)
-        self._ending: dict[str, tuple] = {}
+        self._default_template_page = default_template_page
+        self._slide_count = 0
         loaded_anchor_map = load_anchor_map(anchor_map)
         self._anchors: dict[str, Any] = (
             loaded_anchor_map
@@ -179,14 +149,6 @@ class SlideBuilder:
         if not isinstance(style, dict):
             raise TypeError("style must be None, a style name, or a style dictionary")
 
-        # Namespaced style map form:
-        # {
-        #   ".slide": {...},
-        #   ".title": {...},
-        #   ".subtitle": {...},
-        #   ".code": {...},
-        #   "use": "mycustomstyle"
-        # }
         if any(isinstance(value, dict) for value in style.values()):
             use_names = style.get("use")
             if isinstance(use_names, str):
@@ -205,126 +167,17 @@ class SlideBuilder:
                     if name in _SYSTEM_STYLES:
                         styles.setdefault(name, {}).update(attrs)
                     else:
-                        # Inline custom style blocks are treated as
-                        # slide-level overrides for this call.
                         styles[".slide"].update(attrs)
                 else:
                     styles[".slide"][name] = attrs
             return styles
 
-        # Flat attribute map applies to slide text.
         styles[".slide"].update(style)
         return styles
 
-    # ── Fixed slides (1-4) ──────────────────────────────────
+    # ── Public API ────────────────────────────────────────────
 
-    def add_title(
-        self,
-        title: str,
-        subtitle: str,
-        notes: str = "",
-        style: Optional[str | dict[str, Any]] = None,
-    ) -> None:
-        """Set content for the title slide (slide 1).
-
-        Parameters
-        ----------
-        title : str
-            Main title text in the top-left label area.
-        subtitle : str
-            Subtitle text in the main title area.
-        notes : str
-            Speaker notes.
-        """
-        styles = self._resolve_styles(style)
-        slide = self._prs.slides[_IDX_TITLE]
-        slide_title(
-            slide,
-            title=title,
-            subtitle=subtitle,
-            notes=notes,
-            styles=styles,
-            anchors=self._anchors,
-        )
-
-    def add_objectives(
-        self,
-        items: list[str],
-        notes: str = "",
-        style: Optional[str | dict[str, Any]] = None,
-    ) -> None:
-        """Set content for the Learning Objectives slide (slide 2).
-
-        Parameters
-        ----------
-        items : list of str
-            Learning objective bullet points.
-        notes : str
-            Speaker notes.
-        """
-        styles = self._resolve_styles(style)
-        slide = self._prs.slides[_IDX_OBJECTIVES]
-        slide_objectives(
-            slide,
-            items=items,
-            notes=notes,
-            styles=styles,
-            anchors=self._anchors,
-        )
-
-    def add_toolkit(
-        self,
-        items: list[str],
-        notes: str = "",
-        style: Optional[str | dict[str, Any]] = None,
-    ) -> None:
-        """Set content for the Core Toolkit Recap slide (slide 3).
-
-        Parameters
-        ----------
-        items : list of str
-            Toolkit recap bullet points.
-        notes : str
-            Speaker notes.
-        """
-        styles = self._resolve_styles(style)
-        slide = self._prs.slides[_IDX_TOOLKIT]
-        slide_toolkit(
-            slide,
-            items=items,
-            notes=notes,
-            styles=styles,
-            anchors=self._anchors,
-        )
-
-    def add_whats_new(
-        self,
-        items: list[str],
-        notes: str = "",
-        style: Optional[str | dict[str, Any]] = None,
-    ) -> None:
-        """Set content for the What's New slide (slide 4).
-
-        Parameters
-        ----------
-        items : list of str
-            New concepts bullet points.
-        notes : str
-            Speaker notes.
-        """
-        styles = self._resolve_styles(style)
-        slide = self._prs.slides[_IDX_WHATS_NEW]
-        slide_whats_new(
-            slide,
-            items=items,
-            notes=notes,
-            styles=styles,
-            anchors=self._anchors,
-        )
-
-    # ── Generic content slides (5..n-4) ─────────────────────
-
-    def add_generic(
+    def add_slide(
         self,
         title: str,
         items: list[str] | None = None,
@@ -334,37 +187,30 @@ class SlideBuilder:
         notes: str = "",
         style: Optional[str | dict[str, Any]] = None,
     ) -> None:
-        """Add a generic content slide.
-
-        Clones template slide 5 and populates it with the
-        given title and optional rich content: bullets, code
-        blocks, flow diagrams, or callout text.
+        """Add a content slide by cloning the template's generic page.
 
         Parameters
         ----------
         title : str
             Slide heading.
         items : list of str, optional
-            Bullet point strings. Supports ``**bold**: rest``
-            pattern for bold prefixes.
+            Bullet point strings. Supports ``**bold**`` for inline bold.
         code : str, optional
             Source code for a dark code block.
         flow_boxes : list of dict, optional
-            Flow-diagram boxes (``label``, ``desc``, and
-            optional ``style``/``color``).
+            Flow-diagram boxes (``label``, ``desc``, optional ``style``).
         callout : str, optional
             Bold callout line below other content.
         notes : str
             Speaker notes.
         style : str or dict, optional
-            Per-slide style override. Use a style name
-            registered with :meth:`add_style`, a flat
-            style dict for ``.slide``, or a namespaced
-            dict (``.slide``, ``.title``, ``.subtitle``, ``.code``).
+            Per-slide style override.
         """
         styles = self._resolve_styles(style)
-        new_slide = clone_slide(self._prs, _IDX_DEFAULT)
-        self._default_count += 1
+        # Clone the generic template slide (0-based index)
+        idx = self._default_template_page - 1
+        new_slide = clone_slide(self._prs, idx)
+        self._slide_count += 1
         slide_default(
             new_slide,
             title=title,
@@ -377,168 +223,21 @@ class SlideBuilder:
             anchors=self._anchors,
         )
 
-    # ── Ending slides (n-3 .. n) ────────────────────────────
-
-    def add_checkpoints(
-        self,
-        items: list[str],
-        notes: str = "",
-        style: Optional[str | dict[str, Any]] = None,
-    ) -> None:
-        """Set content for Validation Checkpoints (n-3).
-
-        Parameters
-        ----------
-        items : list of str
-            Up to 5 checkpoint descriptions.
-        notes : str
-            Speaker notes.
-        """
-        styles = self._resolve_styles(style)
-        self._ending["checkpoints"] = (
-            slide_checkpoints,
-            {
-                "items": items,
-                "notes": notes,
-                "styles": styles,
-                "anchors": self._anchors,
-            },
-        )
-
-    def add_exercise(
-        self,
-        items: list[str],
-        notes: str = "",
-        style: Optional[str | dict[str, Any]] = None,
-    ) -> None:
-        """Set content for Exercise Playbook (n-2).
-
-        Parameters
-        ----------
-        items : list of str
-            Exercise strategy bullet points.
-        notes : str
-            Speaker notes.
-        """
-        styles = self._resolve_styles(style)
-        self._ending["exercise"] = (
-            slide_exercise,
-            {
-                "items": items,
-                "notes": notes,
-                "styles": styles,
-                "anchors": self._anchors,
-            },
-        )
-
-    def add_debugging(
-        self,
-        items: list[str],
-        notes: str = "",
-        style: Optional[str | dict[str, Any]] = None,
-    ) -> None:
-        """Set content for Debugging Guide (n-1).
-
-        Parameters
-        ----------
-        items : list of str
-            Debugging tip bullet points.
-        notes : str
-            Speaker notes.
-        """
-        styles = self._resolve_styles(style)
-        self._ending["debugging"] = (
-            slide_debugging,
-            {
-                "items": items,
-                "notes": notes,
-                "styles": styles,
-                "anchors": self._anchors,
-            },
-        )
-
-    def add_recap(
-        self,
-        items: list[str],
-        next_topic: str = "",
-        notes: str = "",
-        style: Optional[str | dict[str, Any]] = None,
-    ) -> None:
-        """Set content for Recap and Next Steps (n).
-
-        Parameters
-        ----------
-        items : list of str
-            Recap bullet points.
-        next_topic : str
-            Short description of the next lesson topic.
-        notes : str
-            Speaker notes.
-        """
-        styles = self._resolve_styles(style)
-        self._ending["recap"] = (
-            slide_recap,
-            {
-                "items": items,
-                "next_topic": next_topic,
-                "notes": notes,
-                "styles": styles,
-                "anchors": self._anchors,
-            },
-        )
-
     # ── Build and save ──────────────────────────────────────
 
     def save(self, path: str) -> None:
         """Assemble the final deck and write to disk.
 
-        This method:
-
-        1. Applies deferred content to the ending slides
-           (checkpoints, exercise, debugging, recap).
-        2. Removes unused template slides (the original
-           default slide 5 and any ending slides that were
-           not populated).
-        3. Saves the presentation to ``path``.
+        Removes the original generic template slide and saves.
 
         Parameters
         ----------
         path : str
             Output file path for the ``.pptx`` file.
         """
-        # Apply ending slide content to template slides
-        ending_map = {
-            "checkpoints": _IDX_CHECKPOINTS,
-            "exercise": _IDX_EXERCISE,
-            "debugging": _IDX_DEBUGGING,
-            "recap": _IDX_RECAP,
-        }
-        for key, idx in ending_map.items():
-            if key in self._ending:
-                func, kwargs = self._ending[key]
-                func(self._prs.slides[idx], **kwargs)
-
-        # Delete unpopulated ending slides and original default
-        # (in reverse order so indices stay valid)
-        to_delete = [_IDX_DEFAULT]
-        for key, idx in ending_map.items():
-            if key not in self._ending:
-                to_delete.append(idx)
-
-        for idx in sorted(set(to_delete), reverse=True):
-            delete_slide(self._prs, idx)
-
-        # After deletion the layout is:
-        #   [fixed 0-3] [endings] [cloned defaults]
-        # We want: [fixed] [defaults] [endings]
-        # Strategy: move each ending from position 4 to
-        # the last position, repeating n_endings times.
-        n_endings = len(self._ending)
-        n_defaults = self._default_count
-        total = len(self._prs.slides)
-        if n_defaults > 0 and n_endings > 0:
-            for _ in range(n_endings):
-                move_slide(self._prs, 4, total - 1)
+        # Remove the original template slide used for cloning
+        idx = self._default_template_page - 1
+        delete_slide(self._prs, idx)
 
         self._prs.save(path)
         n_slides = len(self._prs.slides)
