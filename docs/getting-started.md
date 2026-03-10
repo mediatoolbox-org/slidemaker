@@ -30,9 +30,7 @@ python -c "from slidemaker import SlideBuilder; print('OK')"
 from slidemaker import SlideBuilder
 
 sb = SlideBuilder("my_template.pptx")
-sb.add_title("LESSON 1.1", "Topic")
-sb.add_objectives(["Obj 1", "Obj 2"])
-sb.add_generic("Main Concept", items=["Point A", "Point B"])
+sb.add_slide("Introduction", items=["Point A", "Point B"])
 sb.save("test_deck.pptx")
 ```
 

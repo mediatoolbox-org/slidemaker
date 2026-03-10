@@ -18,11 +18,20 @@ build-backend = "poetry.core.masonry.api"
 
 [dependency-groups]
 dev = [
-    "makim (>=1.29.0,<2.0.0)",
-    "pytest (>=9.0.2,<10.0.0)",
-    "pre-commit (>=4.5.1,<5.0.0)",
-    "vulture (>=2.15,<3.0)",
-    "ruff (>=0.15.5,<0.16.0)",
-    "mypy (>=1.19.1,<2.0.0)",
-    "douki (>=0.11.0,<0.12.0)"
+    "makim (>=1.29.0)",
+    "pytest (>=9.0.2)",
+    "pre-commit (>=4.5.1)",
+    "vulture (>=2.15)",
+    "ruff (>=0.15.5)",
+    "mypy (>=1.19.1)",
+    "douki (>=0.11.0)",
+    "mkdocs (>=1.3)",
+    "mkdocs-exclude (>=1.0.2)",
+    "mkdocs-jupyter (>=0.24.7)",
+    "mkdocs-literate-nav (>=0.4.1)",
+    "mkdocs-macros-plugin (>=0.6.3)",
+    "mkdocs-material (>=8)",
+    "mkdocstrings[python] (>=0.19.0)",
+    "mkdocstrings-python (<2)",
+    "mkdocs-gen-files (>=0.5.0)",
 ]
