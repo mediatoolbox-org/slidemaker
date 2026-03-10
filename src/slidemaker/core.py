@@ -332,7 +332,7 @@ def _resolve_padding(
 
 
 def _apply_text_frame_padding(
-    tf: object,
+    tf: Any,
     normalized: dict[str, Any],
     default: Optional[int] = None,
 ) -> None:
@@ -348,7 +348,7 @@ def _apply_text_frame_padding(
         tf.margin_bottom = pad_bottom
 
 
-def _apply_run_letter_spacing(run: object, spacing: Optional[int]) -> None:
+def _apply_run_letter_spacing(run: Any, spacing: Optional[int]) -> None:
     """Apply letter spacing to a run via ``a:rPr@spc`` (centipoints)."""
     if spacing is None:
         return
@@ -356,7 +356,7 @@ def _apply_run_letter_spacing(run: object, spacing: Optional[int]) -> None:
     r_pr.set("spc", str(spacing))
 
 
-def find_group_textbox(slide: Slide, group_name: str) -> Optional[object]:
+def find_group_textbox(slide: Slide, group_name: str) -> Any:
     """Find the first TextBox inside a named Group shape.
 
     Parameters
@@ -373,7 +373,7 @@ def find_group_textbox(slide: Slide, group_name: str) -> Optional[object]:
     """
     for shape in slide.shapes:
         if shape.name == group_name and shape.shape_type == 6:
-            for child in shape.shapes:
+            for child in shape.shapes:  # type: ignore[attr-defined]
                 if (
                     child.has_text_frame and child.shape_type == 17  # TEXT_BOX
                 ):
@@ -381,7 +381,7 @@ def find_group_textbox(slide: Slide, group_name: str) -> Optional[object]:
     return None
 
 
-def find_textbox_by_name(slide: Slide, name: str) -> Optional[object]:
+def find_textbox_by_name(slide: Slide, name: str) -> Any:
     """Find a shape by its exact name on a slide.
 
     Parameters
@@ -403,7 +403,7 @@ def find_textbox_by_name(slide: Slide, name: str) -> Optional[object]:
 
 
 def set_textbox_text(
-    shape: object,
+    shape: Any,
     text: str,
     font_size: Optional[int] = None,
     font_color: Optional[RGBColor] = None,
@@ -582,7 +582,7 @@ def add_textbox(
     )
     resolved_uppercase = _resolve_uppercase(normalized, False)
 
-    txbox = slide.shapes.add_textbox(left, top, width, height)
+    txbox = slide.shapes.add_textbox(left, top, width, height)  # type: ignore[arg-type]
     tf = txbox.text_frame
     tf.word_wrap = True
     _apply_text_frame_padding(tf, normalized)
@@ -705,7 +705,7 @@ def add_bullet_list(
     )
     resolved_uppercase = _resolve_uppercase(normalized, False)
 
-    txbox = slide.shapes.add_textbox(left, top, width, height)
+    txbox = slide.shapes.add_textbox(left, top, width, height)  # type: ignore[arg-type]
     tf = txbox.text_frame
     tf.word_wrap = True
     _apply_text_frame_padding(tf, normalized)
@@ -794,7 +794,7 @@ def add_shape_rect(
         line_width if line_width is not None else _as_pt(normalized.get("line-width"))
     )
 
-    shp = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, height)
+    shp = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, left, top, width, height)  # type: ignore[arg-type]
     if resolved_line_color is not None:
         shp.line.color.rgb = resolved_line_color
         if resolved_line_width is not None:
@@ -890,18 +890,18 @@ def add_code_block(
         code_text = _with_code_line_numbers(code_text)
 
     shp = add_shape_rect(slide, left, top, width, height, fill_color=resolved_bg_color)
-    shp.shadow.inherit = False
+    shp.shadow.inherit = False  # type: ignore[attr-defined]
 
     pad_left, pad_top, pad_right, pad_bottom = _resolve_padding(
         normalized, Inches(0.25)
     )
-    inner_width = max(1, width - pad_left - pad_right)
-    inner_height = max(1, height - pad_top - pad_bottom)
+    inner_width = max(1, width - (pad_left or 0) - (pad_right or 0))
+    inner_height = max(1, height - (pad_top or 0) - (pad_bottom or 0))
     txbox = slide.shapes.add_textbox(
-        left + pad_left,
-        top + pad_top,
-        inner_width,
-        inner_height,
+        left + (pad_left or 0),  # type: ignore[arg-type]
+        top + (pad_top or 0),  # type: ignore[arg-type]
+        inner_width,  # type: ignore[arg-type]
+        inner_height,  # type: ignore[arg-type]
     )
     tf = txbox.text_frame
     tf.word_wrap = True
@@ -1019,7 +1019,7 @@ def add_flow_boxes(
             box_height,
             fill_color=color,
         )
-        shp.shadow.inherit = False
+        shp.shadow.inherit = False  # type: ignore[attr-defined]
 
         # Label
         add_textbox(
@@ -1069,7 +1069,8 @@ def set_notes(slide: Slide, text: str) -> None:
     """
     notes_slide = slide.notes_slide
     tf = notes_slide.notes_text_frame
-    tf.text = text
+    if tf is not None:
+        tf.text = text
 
 
 def clone_slide(prs: Presentation, template_idx: int) -> Slide:

@@ -443,7 +443,7 @@ def slide_default(
         set_textbox_text(title_tb, title, style=title_style)
 
     # Track the bottom of the last placed element
-    bottom = CONTENT_TOP
+    bottom: int = CONTENT_TOP
 
     # ── Flow diagram ────────────────────────────────────────
     if flow_boxes:
