@@ -1,19 +1,20 @@
-"""Slide-specific template builders for presentations.
+"""
+title: Slide-specific template builders for presentations.
+summary: |-
+  Each function populates one slide type from the branded template.
+  The template has 9 slides mapped as follows:
 
-Each function populates one slide type from the branded template.
-The template has 9 slides mapped as follows:
-
-    Template   Generated
-    --------   ---------
-    1          1          Title page
-    2          2          Learning Objectives
-    3          3          Core Toolkit Recap
-    4          4          What's New in This Lesson
-    5          5..n-4     Default content slides (cloned)
-    6          n-3        Validation Checkpoints
-    7          n-2        Exercise Playbook
-    8          n-1        Debugging Guide
-    9          n          Recap and Next Steps
+  Template   Generated
+  --------   ---------
+  1          1          Title page
+  2          2          Learning Objectives
+  3          3          Core Toolkit Recap
+  4          4          What's New in This Lesson
+  5          5..n-4     Default content slides (cloned)
+  6          n-3        Validation Checkpoints
+  7          n-2        Exercise Playbook
+  8          n-1        Debugging Guide
+  9          n          Recap and Next Steps
 """
 
 from __future__ import annotations
@@ -60,7 +61,18 @@ _FALLBACK_ANCHORS: AnchorMap = default_anchor_map()
 
 
 def _pick(mapping: dict[Any, Any], key: Any, default: Any = None) -> Any:
-    """Get value by key supporting both int and string page keys."""
+    """
+    title: Get value by key supporting both int and string page keys.
+    parameters:
+      mapping:
+        type: dict[Any, Any]
+      key:
+        type: Any
+      default:
+        type: Any
+    returns:
+      type: Any
+    """
     if key in mapping:
         return mapping[key]
     str_key = str(key)
@@ -70,7 +82,16 @@ def _pick(mapping: dict[Any, Any], key: Any, default: Any = None) -> Any:
 
 
 def _title_group_for(anchors: Optional[AnchorMap], page_idx: int) -> str:
-    """Resolve title group name for a 0-based template page index."""
+    """
+    title: Resolve title group name for a 0-based template page index.
+    parameters:
+      anchors:
+        type: Optional[AnchorMap]
+      page_idx:
+        type: int
+    returns:
+      type: str
+    """
     page = page_idx + 1
     groups = anchors.get("title-groups", {}) if isinstance(anchors, dict) else {}
     if not isinstance(groups, dict):
@@ -85,7 +106,18 @@ def _title_slide_group(
     key: str,
     fallback: str,
 ) -> str:
-    """Resolve title-slide group names (title/subtitle)."""
+    """
+    title: Resolve title-slide group names (title/subtitle).
+    parameters:
+      anchors:
+        type: Optional[AnchorMap]
+      key:
+        type: str
+      fallback:
+        type: str
+    returns:
+      type: str
+    """
     section = anchors.get("title-slide", {}) if isinstance(anchors, dict) else {}
     if not isinstance(section, dict):
         section = {}
@@ -100,7 +132,18 @@ def _area(
     key: str,
     default: dict[str, float],
 ) -> dict[str, int]:
-    """Resolve an area in inches and convert to EMU."""
+    """
+    title: Resolve an area in inches and convert to EMU.
+    parameters:
+      anchors:
+        type: Optional[AnchorMap]
+      key:
+        type: str
+      default:
+        type: dict[str, float]
+    returns:
+      type: dict[str, int]
+    """
     areas = anchors.get("areas", {}) if isinstance(anchors, dict) else {}
     if not isinstance(areas, dict):
         areas = {}
@@ -127,7 +170,18 @@ def _remove_shapes_for(
     key: str,
     default: list[str],
 ) -> list[str]:
-    """Resolve a list of shape names to remove for a section."""
+    """
+    title: Resolve a list of shape names to remove for a section.
+    parameters:
+      anchors:
+        type: Optional[AnchorMap]
+      key:
+        type: str
+      default:
+        type: list[str]
+    returns:
+      type: list[str]
+    """
     section = anchors.get("remove-shapes", {}) if isinstance(anchors, dict) else {}
     if not isinstance(section, dict):
         section = {}
@@ -142,7 +196,14 @@ def _remove_shapes_for(
 
 
 def _checkpoint_textboxes(anchors: Optional[AnchorMap]) -> list[str]:
-    """Resolve checkpoint textbox names."""
+    """
+    title: Resolve checkpoint textbox names.
+    parameters:
+      anchors:
+        type: Optional[AnchorMap]
+    returns:
+      type: list[str]
+    """
     section = anchors.get("checkpoints", {}) if isinstance(anchors, dict) else {}
     if not isinstance(section, dict):
         section = {}
@@ -164,7 +225,16 @@ def _merge_style(
     base: Optional[StyleAttrs],
     override: Optional[StyleAttrs],
 ) -> StyleAttrs:
-    """Merge two style dictionaries where override wins."""
+    """
+    title: Merge two style dictionaries where override wins.
+    parameters:
+      base:
+        type: Optional[StyleAttrs]
+      override:
+        type: Optional[StyleAttrs]
+    returns:
+      type: StyleAttrs
+    """
     merged = dict(base or {})
     if override:
         merged.update(override)
@@ -172,7 +242,16 @@ def _merge_style(
 
 
 def _style_for(styles: Optional[StyleMap], name: str) -> StyleAttrs:
-    """Resolve a system style with ``.slide`` fallback."""
+    """
+    title: Resolve a system style with ``.slide`` fallback.
+    parameters:
+      styles:
+        type: Optional[StyleMap]
+      name:
+        type: str
+    returns:
+      type: StyleAttrs
+    """
     slide_style = dict((styles or {}).get(".slide", {}))
     if name == ".slide":
         return slide_style
@@ -184,7 +263,18 @@ def _style_with_fallback(
     name: str,
     fallback: Optional[StyleAttrs] = None,
 ) -> StyleAttrs:
-    """Resolve style and apply fallback defaults."""
+    """
+    title: Resolve style and apply fallback defaults.
+    parameters:
+      styles:
+        type: Optional[StyleMap]
+      name:
+        type: str
+      fallback:
+        type: Optional[StyleAttrs]
+    returns:
+      type: StyleAttrs
+    """
     return _merge_style(fallback, _style_for(styles, name))
 
 
@@ -193,7 +283,16 @@ def _apply_group_title_style(
     group_name: str,
     style: StyleAttrs,
 ) -> None:
-    """Apply style to an existing group title textbox."""
+    """
+    title: Apply style to an existing group title textbox.
+    parameters:
+      slide:
+        type: Slide
+      group_name:
+        type: str
+      style:
+        type: StyleAttrs
+    """
     if not style:
         return
     title_tb = find_group_textbox(slide, group_name)
@@ -211,18 +310,25 @@ def slide_title(
     styles: Optional[StyleMap] = None,
     anchors: Optional[AnchorMap] = None,
 ) -> None:
-    """Populate the title page (slide 1).
-
-    Parameters
-    ----------
-    slide : Slide
-        The first slide of the presentation.
-    title : str
-        Main title text in the top-left label area.
-    subtitle : str
-        Subtitle text in the main title area.
-    notes : str
-        Speaker notes.
+    """
+    title: Populate the title page (slide 1).
+    parameters:
+      slide:
+        type: Slide
+        description: The first slide of the presentation.
+      title:
+        type: str
+        description: Main title text in the top-left label area.
+      subtitle:
+        type: str
+        description: Subtitle text in the main title area.
+      notes:
+        type: str
+        description: Speaker notes.
+      styles:
+        type: Optional[StyleMap]
+      anchors:
+        type: Optional[AnchorMap]
     """
     title_style = _style_for(styles, ".title")
     subtitle_style = _style_with_fallback(styles, ".subtitle", title_style)
@@ -251,16 +357,22 @@ def slide_objectives(
     styles: Optional[StyleMap] = None,
     anchors: Optional[AnchorMap] = None,
 ) -> None:
-    """Populate the Learning Objectives slide (slide 2).
-
-    Parameters
-    ----------
-    slide : Slide
-        The second slide of the presentation.
-    items : list of str
-        Learning objective bullet points.
-    notes : str
-        Speaker notes.
+    """
+    title: Populate the Learning Objectives slide (slide 2).
+    parameters:
+      slide:
+        type: Slide
+        description: The second slide of the presentation.
+      items:
+        type: list[str]
+        description: Learning objective bullet points.
+      notes:
+        type: str
+        description: Speaker notes.
+      styles:
+        type: Optional[StyleMap]
+      anchors:
+        type: Optional[AnchorMap]
     """
     for name in _remove_shapes_for(anchors, "objectives", ["TextBox 6"]):
         tb = find_textbox_by_name(slide, name)
@@ -303,16 +415,22 @@ def slide_toolkit(
     styles: Optional[StyleMap] = None,
     anchors: Optional[AnchorMap] = None,
 ) -> None:
-    """Populate the Core Toolkit Recap slide (slide 3).
-
-    Parameters
-    ----------
-    slide : Slide
-        The third slide of the presentation.
-    items : list of str
-        Toolkit recap bullet points.
-    notes : str
-        Speaker notes.
+    """
+    title: Populate the Core Toolkit Recap slide (slide 3).
+    parameters:
+      slide:
+        type: Slide
+        description: The third slide of the presentation.
+      items:
+        type: list[str]
+        description: Toolkit recap bullet points.
+      notes:
+        type: str
+        description: Speaker notes.
+      styles:
+        type: Optional[StyleMap]
+      anchors:
+        type: Optional[AnchorMap]
     """
     _apply_group_title_style(
         slide, _title_group_for(anchors, 2), _style_for(styles, ".title")
@@ -348,16 +466,22 @@ def slide_whats_new(
     styles: Optional[StyleMap] = None,
     anchors: Optional[AnchorMap] = None,
 ) -> None:
-    """Populate the What's New in This Lesson slide (slide 4).
-
-    Parameters
-    ----------
-    slide : Slide
-        The fourth slide of the presentation.
-    items : list of str
-        New concepts bullet points.
-    notes : str
-        Speaker notes.
+    """
+    title: Populate the What's New in This Lesson slide (slide 4).
+    parameters:
+      slide:
+        type: Slide
+        description: The fourth slide of the presentation.
+      items:
+        type: list[str]
+        description: New concepts bullet points.
+      notes:
+        type: str
+        description: Speaker notes.
+      styles:
+        type: Optional[StyleMap]
+      anchors:
+        type: Optional[AnchorMap]
     """
     _apply_group_title_style(
         slide, _title_group_for(anchors, 3), _style_for(styles, ".title")
@@ -397,41 +521,50 @@ def slide_default(
     styles: Optional[StyleMap] = None,
     anchors: Optional[AnchorMap] = None,
 ) -> None:
-    """Populate a generic content slide (cloned from template 5).
+    """
+    title: Populate a generic content slide (cloned from template 5).
+    summary: |-
+      Supports several content combinations:
 
-    Supports several content combinations:
-
-    - **Bullets only** — pass ``items``.
-    - **Bullets + code block** — pass ``items`` and ``code``.
+      - **Bullets only** — pass ``items``.
+      - **Bullets + code block** — pass ``items`` and ``code``.
       Bullets are placed on the left half, code on the right.
       If no ``items``, the code block spans the full width.
-    - **Flow diagram** — pass ``flow_boxes`` (list of dicts
+      - **Flow diagram** — pass ``flow_boxes`` (list of dicts
       with ``label``, ``desc``, and optional ``style``
       (or legacy ``color``) keys.
-    - **Callout** — pass ``callout`` for a highlighted text
+      - **Callout** — pass ``callout`` for a highlighted text
       line below other content.
-
-    Parameters
-    ----------
-    slide : Slide
-        A slide cloned from template slide 5.
-    title : str
-        Slide heading text.
-    items : list of str, optional
-        Bullet point strings.
-    code : str, optional
-        Source code to display in a dark code block.
-    flow_boxes : list of dict, optional
-        Flow-diagram box definitions.  Each dict must have
-        ``label`` (str) and optionally ``desc`` (str) and
-        ``style`` (dict of box style attributes) or
-        ``color`` (str hex or RGBColor).
-    callout : str, optional
-        A bold callout line placed below main content.
-    notes : str
-        Speaker notes.
-    styles : dict, optional
-        Effective style map for this slide call.
+    parameters:
+      slide:
+        type: Slide
+        description: A slide cloned from template slide 5.
+      title:
+        type: str
+        description: Slide heading text.
+      items:
+        type: list[str] | None
+        description: Bullet point strings.
+      code:
+        type: str | None
+        description: Source code to display in a dark code block.
+      flow_boxes:
+        type: list[dict] | None
+        description: >-
+          Flow-diagram box definitions.  Each dict must have ``label`` (str)
+          and optionally ``desc`` (str) and ``style`` (dict of box style
+          attributes) or ``color`` (str hex or RGBColor).
+      callout:
+        type: str | None
+        description: A bold callout line placed below main content.
+      notes:
+        type: str
+        description: Speaker notes.
+      styles:
+        type: Optional[StyleMap]
+        description: Effective style map for this slide call.
+      anchors:
+        type: Optional[AnchorMap]
     """
     title_style = _style_for(styles, ".title")
     slide_style = _style_for(styles, ".slide")
@@ -587,20 +720,26 @@ def slide_checkpoints(
     styles: Optional[StyleMap] = None,
     anchors: Optional[AnchorMap] = None,
 ) -> None:
-    """Populate the Validation Checkpoints slide (n-3).
-
-    The template slide 6 has 5 pre-built checklist rows with
-    TextBoxes named ``TextBox 34`` through ``TextBox 38``.
-    This function fills those text boxes with the provided items.
-
-    Parameters
-    ----------
-    slide : Slide
-        The Validation Checkpoints slide.
-    items : list of str
-        Up to 5 checkpoint descriptions.
-    notes : str
-        Speaker notes.
+    """
+    title: Populate the Validation Checkpoints slide (n-3).
+    summary: |-
+      The template slide 6 has 5 pre-built checklist rows with
+      TextBoxes named ``TextBox 34`` through ``TextBox 38``.
+      This function fills those text boxes with the provided items.
+    parameters:
+      slide:
+        type: Slide
+        description: The Validation Checkpoints slide.
+      items:
+        type: list[str]
+        description: Up to 5 checkpoint descriptions.
+      notes:
+        type: str
+        description: Speaker notes.
+      styles:
+        type: Optional[StyleMap]
+      anchors:
+        type: Optional[AnchorMap]
     """
     _apply_group_title_style(
         slide, _title_group_for(anchors, 5), _style_for(styles, ".title")
@@ -635,16 +774,22 @@ def slide_exercise(
     styles: Optional[StyleMap] = None,
     anchors: Optional[AnchorMap] = None,
 ) -> None:
-    """Populate the Exercise Playbook slide (n-2).
-
-    Parameters
-    ----------
-    slide : Slide
-        The Exercise Playbook slide.
-    items : list of str
-        Exercise strategy bullet points.
-    notes : str
-        Speaker notes.
+    """
+    title: Populate the Exercise Playbook slide (n-2).
+    parameters:
+      slide:
+        type: Slide
+        description: The Exercise Playbook slide.
+      items:
+        type: list[str]
+        description: Exercise strategy bullet points.
+      notes:
+        type: str
+        description: Speaker notes.
+      styles:
+        type: Optional[StyleMap]
+      anchors:
+        type: Optional[AnchorMap]
     """
     _apply_group_title_style(
         slide, _title_group_for(anchors, 6), _style_for(styles, ".title")
@@ -680,16 +825,22 @@ def slide_debugging(
     styles: Optional[StyleMap] = None,
     anchors: Optional[AnchorMap] = None,
 ) -> None:
-    """Populate the Debugging Guide slide (n-1).
-
-    Parameters
-    ----------
-    slide : Slide
-        The Debugging Guide slide.
-    items : list of str
-        Debugging tip bullet points.
-    notes : str
-        Speaker notes.
+    """
+    title: Populate the Debugging Guide slide (n-1).
+    parameters:
+      slide:
+        type: Slide
+        description: The Debugging Guide slide.
+      items:
+        type: list[str]
+        description: Debugging tip bullet points.
+      notes:
+        type: str
+        description: Speaker notes.
+      styles:
+        type: Optional[StyleMap]
+      anchors:
+        type: Optional[AnchorMap]
     """
     _apply_group_title_style(
         slide, _title_group_for(anchors, 7), _style_for(styles, ".title")
@@ -726,18 +877,25 @@ def slide_recap(
     styles: Optional[StyleMap] = None,
     anchors: Optional[AnchorMap] = None,
 ) -> None:
-    """Populate the Recap and Next Steps slide (n, final).
-
-    Parameters
-    ----------
-    slide : Slide
-        The final slide.
-    items : list of str
-        Recap bullet points.
-    next_topic : str
-        Short description of the next lesson topic.
-    notes : str
-        Speaker notes.
+    """
+    title: Populate the Recap and Next Steps slide (n, final).
+    parameters:
+      slide:
+        type: Slide
+        description: The final slide.
+      items:
+        type: list[str]
+        description: Recap bullet points.
+      next_topic:
+        type: str
+        description: Short description of the next lesson topic.
+      notes:
+        type: str
+        description: Speaker notes.
+      styles:
+        type: Optional[StyleMap]
+      anchors:
+        type: Optional[AnchorMap]
     """
     _apply_group_title_style(
         slide, _title_group_for(anchors, 8), _style_for(styles, ".title")

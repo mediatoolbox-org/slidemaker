@@ -1,4 +1,6 @@
-"""Command-line helpers for slidemaker."""
+"""
+title: Command-line helpers for slidemaker.
+"""
 
 from __future__ import annotations
 

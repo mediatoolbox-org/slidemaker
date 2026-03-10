@@ -1,4 +1,6 @@
-"""Test rich content in SlideBuilder (code, flow, callout)."""
+"""
+title: Test rich content in SlideBuilder (code, flow, callout).
+"""
 
 from __future__ import annotations
 

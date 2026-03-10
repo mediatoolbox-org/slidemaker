@@ -1,4 +1,6 @@
-"""SlideMaker — branded slide deck generator."""
+"""
+title: SlideMaker — branded slide deck generator.
+"""
 
 from slidemaker.cli import SlideBuilder
 

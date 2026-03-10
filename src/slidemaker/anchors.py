@@ -1,4 +1,6 @@
-"""Anchor-map helpers for template-specific shape and layout bindings."""
+"""
+title: Anchor-map helpers for template-specific shape and layout bindings.
+"""
 
 from __future__ import annotations
 
@@ -15,7 +17,14 @@ DEFAULT_TEMPLATE_PAGE = 5
 def default_anchor_map(
     default_template_page: int = DEFAULT_TEMPLATE_PAGE,
 ) -> dict[str, Any]:
-    """Return the built-in anchor map matching the default template."""
+    """
+    title: Return the built-in anchor map matching the default template.
+    parameters:
+      default_template_page:
+        type: int
+    returns:
+      type: dict[str, Any]
+    """
     return {
         "version": 1,
         "default-template-page": int(default_template_page),
@@ -128,7 +137,14 @@ def default_anchor_map(
 
 
 def _shape_catalog(template: str | Path) -> dict[int, list[dict[str, Any]]]:
-    """Inspect template slides and return a simple shape catalog."""
+    """
+    title: Inspect template slides and return a simple shape catalog.
+    parameters:
+      template:
+        type: str | Path
+    returns:
+      type: dict[int, list[dict[str, Any]]]
+    """
     prs = Presentation(str(template))
     catalog: dict[int, list[dict[str, Any]]] = {}
     for page, slide in enumerate(prs.slides, start=1):
@@ -157,7 +173,18 @@ def generate_anchor_map(
     default_template_page: int = DEFAULT_TEMPLATE_PAGE,
     include_shape_catalog: bool = True,
 ) -> dict[str, Any]:
-    """Generate an editable anchor map initialized from built-in defaults."""
+    """
+    title: Generate an editable anchor map initialized from built-in defaults.
+    parameters:
+      template:
+        type: str | Path
+      default_template_page:
+        type: int
+      include_shape_catalog:
+        type: bool
+    returns:
+      type: dict[str, Any]
+    """
     anchor_map = default_anchor_map(default_template_page)
     anchor_map["template"] = str(template)
     if include_shape_catalog:
@@ -166,7 +193,14 @@ def generate_anchor_map(
 
 
 def _load_yaml(text: str) -> dict[str, Any]:
-    """Load YAML text using PyYAML when available."""
+    """
+    title: Load YAML text using PyYAML when available.
+    parameters:
+      text:
+        type: str
+    returns:
+      type: dict[str, Any]
+    """
     try:
         import yaml  # type: ignore
     except ModuleNotFoundError as exc:
@@ -183,7 +217,14 @@ def _load_yaml(text: str) -> dict[str, Any]:
 def load_anchor_map(
     anchor_map: Optional[dict[str, Any] | str | Path],
 ) -> Optional[dict[str, Any]]:
-    """Load anchor map from dict or file path."""
+    """
+    title: Load anchor map from dict or file path.
+    parameters:
+      anchor_map:
+        type: Optional[dict[str, Any] | str | Path]
+    returns:
+      type: Optional[dict[str, Any]]
+    """
     if anchor_map is None:
         return None
     if isinstance(anchor_map, dict):
@@ -200,7 +241,17 @@ def load_anchor_map(
 
 
 def dump_anchor_map(anchor_map: dict[str, Any], out: str | Path) -> Path:
-    """Write anchor map to disk as YAML if possible, else JSON-compatible YAML."""
+    """
+    title: >-
+      Write anchor map to disk as YAML if possible, else JSON-compatible YAML.
+    parameters:
+      anchor_map:
+        type: dict[str, Any]
+      out:
+        type: str | Path
+    returns:
+      type: Path
+    """
     out_path = Path(out)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     try:

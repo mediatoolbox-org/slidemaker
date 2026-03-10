@@ -1,7 +1,8 @@
-"""Core utilities for manipulating python-pptx presentations.
-
-Provides low-level helper functions used by the template module
-to find shapes, set text, add bullet lists, and clone slides.
+"""
+title: Core utilities for manipulating python-pptx presentations.
+summary: |-
+  Provides low-level helper functions used by the template module
+  to find shapes, set text, add bullet lists, and clone slides.
 """
 
 from __future__ import annotations
@@ -54,7 +55,14 @@ _INLINE_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
 
 
 def _normalize_style(style: Optional[dict[str, Any]]) -> dict[str, Any]:
-    """Normalize style keys to kebab-case lowercase."""
+    """
+    title: Normalize style keys to kebab-case lowercase.
+    parameters:
+      style:
+        type: Optional[dict[str, Any]]
+    returns:
+      type: dict[str, Any]
+    """
     if not style:
         return {}
     normalized: dict[str, Any] = {}
@@ -69,7 +77,16 @@ def _merge_style(
     base: Optional[dict[str, Any]],
     override: Optional[dict[str, Any]],
 ) -> dict[str, Any]:
-    """Return a shallow merge where ``override`` wins."""
+    """
+    title: Return a shallow merge where ``override`` wins.
+    parameters:
+      base:
+        type: Optional[dict[str, Any]]
+      override:
+        type: Optional[dict[str, Any]]
+    returns:
+      type: dict[str, Any]
+    """
     merged = dict(base or {})
     if override:
         merged.update(_normalize_style(override))
@@ -80,7 +97,16 @@ def _as_rgb_color(
     value: Any,
     default: Optional[RGBColor] = None,
 ) -> Optional[RGBColor]:
-    """Parse an RGBColor from common style representations."""
+    """
+    title: Parse an RGBColor from common style representations.
+    parameters:
+      value:
+        type: Any
+      default:
+        type: Optional[RGBColor]
+    returns:
+      type: Optional[RGBColor]
+    """
     if value is None:
         return default
     if isinstance(value, RGBColor):
@@ -109,7 +135,16 @@ def _as_rgb_color(
 
 
 def _as_pt(value: Any, default: Optional[int] = None) -> Optional[int]:
-    """Parse a point-sized value as EMU using ``Pt``."""
+    """
+    title: Parse a point-sized value as EMU using ``Pt``.
+    parameters:
+      value:
+        type: Any
+      default:
+        type: Optional[int]
+    returns:
+      type: Optional[int]
+    """
     if value is None:
         return default
     if isinstance(value, (int, float)):
@@ -126,7 +161,14 @@ def _as_pt(value: Any, default: Optional[int] = None) -> Optional[int]:
 
 
 def _font_size_pt(font_size: Any) -> Optional[float]:
-    """Extract font size in points from a ``Length`` value."""
+    """
+    title: Extract font size in points from a ``Length`` value.
+    parameters:
+      font_size:
+        type: Any
+    returns:
+      type: Optional[float]
+    """
     if font_size is None:
         return None
     pt = getattr(font_size, "pt", None)
@@ -143,11 +185,21 @@ def _resolve_line_spacing(
     font_size: Any,
     default: Any = None,
 ) -> Any:
-    """Resolve line spacing for Canva-friendly output.
-
-    Numeric values are treated as multipliers and converted
-    to fixed point leading based on font size. Use ``\"pt\"``
-    suffix for absolute point values.
+    """
+    title: Resolve line spacing for Canva-friendly output.
+    summary: |-
+      Numeric values are treated as multipliers and converted
+      to fixed point leading based on font size. Use ``"pt"``
+      suffix for absolute point values.
+    parameters:
+      value:
+        type: Any
+      font_size:
+        type: Any
+      default:
+        type: Any
+    returns:
+      type: Any
     """
     if value is None:
         return default
@@ -194,10 +246,20 @@ def _resolve_letter_spacing(
     font_size: Any,
     default: Optional[int] = None,
 ) -> Optional[int]:
-    """Resolve letter spacing for ``a:rPr@spc``.
-
-    Numeric values are treated as tracking units relative to
-    font size (Canva style). ``\"pt\"`` values are absolute.
+    """
+    title: Resolve letter spacing for ``a:rPr@spc``.
+    summary: |-
+      Numeric values are treated as tracking units relative to
+      font size (Canva style). ``"pt"`` values are absolute.
+    parameters:
+      value:
+        type: Any
+      font_size:
+        type: Any
+      default:
+        type: Optional[int]
+    returns:
+      type: Optional[int]
     """
     if value is None:
         return default
@@ -229,7 +291,16 @@ def _resolve_letter_spacing(
 
 
 def _as_bool(value: Any, default: Optional[bool] = None) -> Optional[bool]:
-    """Parse a boolean from common string/int representations."""
+    """
+    title: Parse a boolean from common string/int representations.
+    parameters:
+      value:
+        type: Any
+      default:
+        type: Optional[bool]
+    returns:
+      type: Optional[bool]
+    """
     if value is None:
         return default
     if isinstance(value, bool):
@@ -249,7 +320,16 @@ def _resolve_uppercase(
     normalized: dict[str, Any],
     default: bool = False,
 ) -> bool:
-    """Resolve uppercase transform from style keys."""
+    """
+    title: Resolve uppercase transform from style keys.
+    parameters:
+      normalized:
+        type: dict[str, Any]
+      default:
+        type: bool
+    returns:
+      type: bool
+    """
     text_transform = normalized.get("text-transform")
     if isinstance(text_transform, str):
         mode = text_transform.strip().lower()
@@ -261,12 +341,30 @@ def _resolve_uppercase(
 
 
 def _apply_uppercase(text: str, uppercase: bool) -> str:
-    """Apply uppercase transform when enabled."""
+    """
+    title: Apply uppercase transform when enabled.
+    parameters:
+      text:
+        type: str
+      uppercase:
+        type: bool
+    returns:
+      type: str
+    """
     return text.upper() if uppercase else text
 
 
 def _as_alignment(value: Any, default: Optional[int] = None) -> Optional[int]:
-    """Parse paragraph alignment from text/int values."""
+    """
+    title: Parse paragraph alignment from text/int values.
+    parameters:
+      value:
+        type: Any
+      default:
+        type: Optional[int]
+    returns:
+      type: Optional[int]
+    """
     if value is None:
         return default
     if isinstance(value, int):
@@ -277,11 +375,17 @@ def _as_alignment(value: Any, default: Optional[int] = None) -> Optional[int]:
 
 
 def _with_code_line_numbers(code_text: str) -> str:
-    """Prefix code lines with right-aligned line numbers.
-
-    Uses ``" X  "`` for one-digit lines and ``"XX  "`` for
-    two-digit lines. If all non-empty lines already look
-    numbered, the input is returned unchanged.
+    """
+    title: Prefix code lines with right-aligned line numbers.
+    summary: |-
+      Uses ``" X  "`` for one-digit lines and ``"XX  "`` for
+      two-digit lines. If all non-empty lines already look
+      numbered, the input is returned unchanged.
+    parameters:
+      code_text:
+        type: str
+    returns:
+      type: str
     """
     lines = code_text.splitlines()
     non_empty = [line for line in lines if line.strip()]
@@ -291,7 +395,14 @@ def _with_code_line_numbers(code_text: str) -> str:
 
 
 def _markdown_bold_segments(text: str) -> list[tuple[str, bool]]:
-    """Split text into plain/bold segments based on ``**...**`` markup."""
+    """
+    title: Split text into plain/bold segments based on ``**...**`` markup.
+    parameters:
+      text:
+        type: str
+    returns:
+      type: list[tuple[str, bool]]
+    """
     segments: list[tuple[str, bool]] = []
     last = 0
     for match in _INLINE_BOLD_RE.finditer(text):
@@ -319,7 +430,16 @@ def _resolve_padding(
     normalized: dict[str, Any],
     default: Optional[int] = None,
 ) -> tuple[Optional[int], Optional[int], Optional[int], Optional[int]]:
-    """Resolve padding values (left, top, right, bottom) in EMU."""
+    """
+    title: Resolve padding values (left, top, right, bottom) in EMU.
+    parameters:
+      normalized:
+        type: dict[str, Any]
+      default:
+        type: Optional[int]
+    returns:
+      type: tuple[Optional[int], Optional[int], Optional[int], Optional[int]]
+    """
     pad_all = _as_pt(normalized.get("padding"), default)
     pad_x = _as_pt(normalized.get("padding-x"), pad_all)
     pad_y = _as_pt(normalized.get("padding-y"), pad_all)
@@ -336,7 +456,16 @@ def _apply_text_frame_padding(
     normalized: dict[str, Any],
     default: Optional[int] = None,
 ) -> None:
-    """Apply resolved padding values to a text frame margins."""
+    """
+    title: Apply resolved padding values to a text frame margins.
+    parameters:
+      tf:
+        type: Any
+      normalized:
+        type: dict[str, Any]
+      default:
+        type: Optional[int]
+    """
     pad_left, pad_top, pad_right, pad_bottom = _resolve_padding(normalized, default)
     if pad_left is not None:
         tf.margin_left = pad_left
@@ -349,7 +478,14 @@ def _apply_text_frame_padding(
 
 
 def _apply_run_letter_spacing(run: Any, spacing: Optional[int]) -> None:
-    """Apply letter spacing to a run via ``a:rPr@spc`` (centipoints)."""
+    """
+    title: Apply letter spacing to a run via ``a:rPr@spc`` (centipoints).
+    parameters:
+      run:
+        type: Any
+      spacing:
+        type: Optional[int]
+    """
     if spacing is None:
         return
     r_pr = run._r.get_or_add_rPr()
@@ -357,19 +493,18 @@ def _apply_run_letter_spacing(run: Any, spacing: Optional[int]) -> None:
 
 
 def find_group_textbox(slide: Slide, group_name: str) -> Any:
-    """Find the first TextBox inside a named Group shape.
-
-    Parameters
-    ----------
-    slide : Slide
-        The slide to search.
-    group_name : str
-        The ``name`` attribute of the Group shape.
-
-    Returns
-    -------
-    pptx.shapes.autoshape.Shape or None
-        The TextBox shape if found, otherwise ``None``.
+    """
+    title: Find the first TextBox inside a named Group shape.
+    parameters:
+      slide:
+        type: Slide
+        description: The slide to search.
+      group_name:
+        type: str
+        description: The ``name`` attribute of the Group shape.
+    returns:
+      type: Any
+      description: The TextBox shape if found, otherwise ``None``.
     """
     for shape in slide.shapes:
         if shape.name == group_name and shape.shape_type == 6:
@@ -382,19 +517,18 @@ def find_group_textbox(slide: Slide, group_name: str) -> Any:
 
 
 def find_textbox_by_name(slide: Slide, name: str) -> Any:
-    """Find a shape by its exact name on a slide.
-
-    Parameters
-    ----------
-    slide : Slide
-        The slide to search.
-    name : str
-        The ``name`` attribute of the shape.
-
-    Returns
-    -------
-    pptx.shapes.autoshape.Shape or None
-        The shape if found, otherwise ``None``.
+    """
+    title: Find a shape by its exact name on a slide.
+    parameters:
+      slide:
+        type: Slide
+        description: The slide to search.
+      name:
+        type: str
+        description: The ``name`` attribute of the shape.
+    returns:
+      type: Any
+      description: The shape if found, otherwise ``None``.
     """
     for shape in slide.shapes:
         if shape.name == name:
@@ -413,24 +547,34 @@ def set_textbox_text(
     alignment: Optional[int] = None,
     style: Optional[dict[str, Any]] = None,
 ) -> None:
-    """Replace all text in a shape's text frame.
-
-    Parameters
-    ----------
-    shape : Shape
-        A shape with a ``text_frame`` attribute.
-    text : str
-        The replacement text.
-    font_size : int, optional
-        Font size in EMU (use ``Pt()``).
-    font_color : RGBColor, optional
-        Font colour.
-    font_name : str, optional
-        Font family name.
-    bold : bool, optional
-        Whether the text is bold.
-    alignment : int, optional
-        Paragraph alignment constant.
+    """
+    title: Replace all text in a shape's text frame.
+    parameters:
+      shape:
+        type: Any
+        description: A shape with a ``text_frame`` attribute.
+      text:
+        type: str
+        description: The replacement text.
+      font_size:
+        type: Optional[int]
+        description: Font size in EMU (use ``Pt()``).
+      font_color:
+        type: Optional[RGBColor]
+        description: Font colour.
+      font_name:
+        type: Optional[str]
+        description: Font family name.
+      bold:
+        type: Optional[bool]
+        description: Whether the text is bold.
+      italic:
+        type: Optional[bool]
+      alignment:
+        type: Optional[int]
+        description: Paragraph alignment constant.
+      style:
+        type: Optional[dict[str, Any]]
     """
     normalized = _normalize_style(style)
     resolved_uppercase = _resolve_uppercase(normalized, False)
@@ -509,37 +653,49 @@ def add_textbox(
     alignment: Optional[int] = None,
     style: Optional[dict[str, Any]] = None,
 ) -> object:
-    """Add a new text box to a slide.
-
-    Parameters
-    ----------
-    slide : Slide
-        Target slide.
-    left : int
-        Horizontal position in EMU.
-    top : int
-        Vertical position in EMU.
-    width : int
-        Box width in EMU.
-    height : int
-        Box height in EMU.
-    text : str
-        The text content.
-    font_size : int
-        Font size in EMU (use ``Pt()``).
-    font_color : RGBColor
-        Font colour.
-    font_name : str
-        Font family name.
-    bold : bool
-        Whether the text is bold.
-    alignment : int
-        Paragraph alignment constant.
-
-    Returns
-    -------
-    pptx.shapes.autoshape.Shape
-        The newly created text box shape.
+    """
+    title: Add a new text box to a slide.
+    parameters:
+      slide:
+        type: Slide
+        description: Target slide.
+      left:
+        type: int
+        description: Horizontal position in EMU.
+      top:
+        type: int
+        description: Vertical position in EMU.
+      width:
+        type: int
+        description: Box width in EMU.
+      height:
+        type: int
+        description: Box height in EMU.
+      text:
+        type: str
+        description: The text content.
+      font_size:
+        type: Optional[int]
+        description: Font size in EMU (use ``Pt()``).
+      font_color:
+        type: Optional[RGBColor]
+        description: Font colour.
+      font_name:
+        type: Optional[str]
+        description: Font family name.
+      bold:
+        type: Optional[bool]
+        description: Whether the text is bold.
+      italic:
+        type: Optional[bool]
+      alignment:
+        type: Optional[int]
+        description: Paragraph alignment constant.
+      style:
+        type: Optional[dict[str, Any]]
+    returns:
+      type: object
+      description: The newly created text box shape.
     """
     normalized = _normalize_style(style)
     resolved_font_size = (
@@ -616,43 +772,55 @@ def add_bullet_list(
     bold_prefixes: Optional[bool] = None,
     style: Optional[dict[str, Any]] = None,
 ) -> object:
-    """Add a bulleted list as a text box on a slide.
-
-    Supports basic inline markdown bold: ``**text**`` segments
-    render in bold when ``bold_prefixes`` is ``True``.
-
-    Parameters
-    ----------
-    slide : Slide
-        Target slide.
-    left : int
-        Horizontal position in EMU.
-    top : int
-        Vertical position in EMU.
-    width : int
-        Box width in EMU.
-    height : int
-        Box height in EMU.
-    items : list of str
-        Bullet point strings.
-    font_size : int
-        Font size in EMU.
-    font_color : RGBColor
-        Font colour.
-    font_name : str
-        Font family name.
-    spacing : int
-        Space after each paragraph in EMU.
-    bullet_char : str
-        Character used for real paragraph bullets.
-    bold_prefixes : bool
-        If ``True``, parse and render ``**...**`` segments in
-        bold within each item.
-
-    Returns
-    -------
-    pptx.shapes.autoshape.Shape
-        The newly created text box shape.
+    """
+    title: Add a bulleted list as a text box on a slide.
+    summary: |-
+      Supports basic inline markdown bold: ``**text**`` segments
+      render in bold when ``bold_prefixes`` is ``True``.
+    parameters:
+      slide:
+        type: Slide
+        description: Target slide.
+      left:
+        type: int
+        description: Horizontal position in EMU.
+      top:
+        type: int
+        description: Vertical position in EMU.
+      width:
+        type: int
+        description: Box width in EMU.
+      height:
+        type: int
+        description: Box height in EMU.
+      items:
+        type: list[str]
+        description: Bullet point strings.
+      font_size:
+        type: Optional[int]
+        description: Font size in EMU.
+      font_color:
+        type: Optional[RGBColor]
+        description: Font colour.
+      font_name:
+        type: Optional[str]
+        description: Font family name.
+      spacing:
+        type: Optional[int]
+        description: Space after each paragraph in EMU.
+      bullet_char:
+        type: Optional[str]
+        description: Character used for real paragraph bullets.
+      bold_prefixes:
+        type: Optional[bool]
+        description: >-
+          If ``True``, parse and render ``**...**`` segments in bold within
+          each item.
+      style:
+        type: Optional[dict[str, Any]]
+    returns:
+      type: object
+      description: The newly created text box shape.
     """
     normalized = _normalize_style(style)
     resolved_font_size = (
@@ -757,27 +925,36 @@ def add_shape_rect(
     line_width: Optional[int] = None,
     style: Optional[dict[str, Any]] = None,
 ) -> object:
-    """Add a rectangle shape to a slide.
-
-    Parameters
-    ----------
-    slide : Slide
-        Target slide.
-    left : int
-        Horizontal position in EMU.
-    top : int
-        Vertical position in EMU.
-    width : int
-        Shape width in EMU.
-    height : int
-        Shape height in EMU.
-    fill_color : RGBColor, optional
-        Fill colour. If ``None`` the shape has no fill.
-
-    Returns
-    -------
-    pptx.shapes.autoshape.Shape
-        The newly created rectangle shape.
+    """
+    title: Add a rectangle shape to a slide.
+    parameters:
+      slide:
+        type: Slide
+        description: Target slide.
+      left:
+        type: int
+        description: Horizontal position in EMU.
+      top:
+        type: int
+        description: Vertical position in EMU.
+      width:
+        type: int
+        description: Shape width in EMU.
+      height:
+        type: int
+        description: Shape height in EMU.
+      fill_color:
+        type: Optional[RGBColor]
+        description: Fill colour. If ``None`` the shape has no fill.
+      line_color:
+        type: Optional[RGBColor]
+      line_width:
+        type: Optional[int]
+      style:
+        type: Optional[dict[str, Any]]
+    returns:
+      type: object
+      description: The newly created rectangle shape.
     """
     normalized = _normalize_style(style)
     resolved_fill = (
@@ -822,33 +999,46 @@ def add_code_block(
     font_name: Optional[str] = None,
     style: Optional[dict[str, Any]] = None,
 ) -> None:
-    """Add a code block with a dark background to a slide.
-
-    Renders monospace text on a solid-colour rectangle.
-    Style options include ``bg-color``, ``font-color``,
-    ``font-name``, ``font-size``, ``line-numbers``,
-    ``letter-spacing``, ``line-spacing`` (or ``line-height``),
-    ``uppercase`` (or ``text-transform: uppercase``), and
-    ``padding`` (plus side-specific variants).
-
-    Parameters
-    ----------
-    slide : Slide
-        Target slide.
-    left : int
-        Horizontal position in EMU.
-    top : int
-        Vertical position in EMU.
-    width : int
-        Block width in EMU.
-    height : int
-        Block height in EMU.
-    code_text : str
-        The source code to display.
-    bg_color : RGBColor
-        Background rectangle colour.
-    font_size : int
-        Font size for the code text.
+    """
+    title: Add a code block with a dark background to a slide.
+    summary: |-
+      Renders monospace text on a solid-colour rectangle.
+      Style options include ``bg-color``, ``font-color``,
+      ``font-name``, ``font-size``, ``line-numbers``,
+      ``letter-spacing``, ``line-spacing`` (or ``line-height``),
+      ``uppercase`` (or ``text-transform: uppercase``), and
+      ``padding`` (plus side-specific variants).
+    parameters:
+      slide:
+        type: Slide
+        description: Target slide.
+      left:
+        type: int
+        description: Horizontal position in EMU.
+      top:
+        type: int
+        description: Vertical position in EMU.
+      width:
+        type: int
+        description: Block width in EMU.
+      height:
+        type: int
+        description: Block height in EMU.
+      code_text:
+        type: str
+        description: The source code to display.
+      bg_color:
+        type: Optional[RGBColor]
+        description: Background rectangle colour.
+      font_size:
+        type: Optional[int]
+        description: Font size for the code text.
+      font_color:
+        type: Optional[RGBColor]
+      font_name:
+        type: Optional[str]
+      style:
+        type: Optional[dict[str, Any]]
     """
     normalized = _normalize_style(style)
     resolved_bg_color = (
@@ -931,36 +1121,44 @@ def add_flow_boxes(
     gap: int = Inches(0.5),
     style: Optional[dict[str, Any]] = None,
 ) -> None:
-    """Add a horizontal flow diagram with coloured boxes and arrows.
+    """
+    title: Add a horizontal flow diagram with coloured boxes and arrows.
+    summary: |-
+      Each box is a dictionary with keys:
 
-    Each box is a dictionary with keys:
-
-    - ``label`` (str): bold heading inside the box.
-    - ``desc`` (str): smaller description text (may contain
+      - ``label`` (str): bold heading inside the box.
+      - ``desc`` (str): smaller description text (may contain
       newlines).
-    - ``style`` (dict): style attributes for this box
+      - ``style`` (dict): style attributes for this box
       (for example ``fill-color``/``font-color``).
-    - ``color`` (str or RGBColor): legacy fill colour key.
-
-    Parameters
-    ----------
-    slide : Slide
-        Target slide.
-    boxes : list of dict
-        Box definitions (see above).
-    left : int
-        Horizontal start position in EMU.
-    top : int
-        Vertical position in EMU.
-    box_width : int, optional
-        Width of each box.  If ``None`` it is computed to fill
-        the available content width.
-    box_height : int
-        Height of each box.
-    gap : int
-        Space between boxes (includes arrow).
-    style : dict, optional
-        Default style for all boxes in the flow.
+      - ``color`` (str or RGBColor): legacy fill colour key.
+    parameters:
+      slide:
+        type: Slide
+        description: Target slide.
+      boxes:
+        type: list[dict]
+        description: Box definitions (see above).
+      left:
+        type: int
+        description: Horizontal start position in EMU.
+      top:
+        type: int
+        description: Vertical position in EMU.
+      box_width:
+        type: Optional[int]
+        description: >-
+          Width of each box.  If ``None`` it is computed to fill the available
+          content width.
+      box_height:
+        type: int
+        description: Height of each box.
+      gap:
+        type: int
+        description: Space between boxes (includes arrow).
+      style:
+        type: Optional[dict[str, Any]]
+        description: Default style for all boxes in the flow.
     """
     n = len(boxes)
     if n == 0:
@@ -1058,14 +1256,15 @@ def add_flow_boxes(
 
 
 def set_notes(slide: Slide, text: str) -> None:
-    """Set the speaker notes for a slide.
-
-    Parameters
-    ----------
-    slide : Slide
-        Target slide.
-    text : str
-        The notes content.
+    """
+    title: Set the speaker notes for a slide.
+    parameters:
+      slide:
+        type: Slide
+        description: Target slide.
+      text:
+        type: str
+        description: The notes content.
     """
     notes_slide = slide.notes_slide
     tf = notes_slide.notes_text_frame
@@ -1074,22 +1273,21 @@ def set_notes(slide: Slide, text: str) -> None:
 
 
 def clone_slide(prs: Presentation, template_idx: int) -> Slide:
-    """Clone a slide from the presentation by index.
-
-    Creates a deep copy of the slide's XML and all
-    relationships, appending the new slide at the end.
-
-    Parameters
-    ----------
-    prs : Presentation
-        The presentation object.
-    template_idx : int
-        Zero-based index of the slide to clone.
-
-    Returns
-    -------
-    Slide
-        The newly created slide.
+    """
+    title: Clone a slide from the presentation by index.
+    summary: |-
+      Creates a deep copy of the slide's XML and all
+      relationships, appending the new slide at the end.
+    parameters:
+      prs:
+        type: Presentation
+        description: The presentation object.
+      template_idx:
+        type: int
+        description: Zero-based index of the slide to clone.
+    returns:
+      type: Slide
+      description: The newly created slide.
     """
     template_slide = prs.slides[template_idx]
     slide_layout = template_slide.slide_layout
@@ -1128,14 +1326,15 @@ def clone_slide(prs: Presentation, template_idx: int) -> Slide:
 
 
 def delete_slide(prs: Presentation, slide_idx: int) -> None:
-    """Delete a slide from the presentation by index.
-
-    Parameters
-    ----------
-    prs : Presentation
-        The presentation object.
-    slide_idx : int
-        Zero-based index of the slide to delete.
+    """
+    title: Delete a slide from the presentation by index.
+    parameters:
+      prs:
+        type: Presentation
+        description: The presentation object.
+      slide_idx:
+        type: int
+        description: Zero-based index of the slide to delete.
     """
     rId = prs.slides._sldIdLst[slide_idx].get(
         "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id"
@@ -1146,16 +1345,18 @@ def delete_slide(prs: Presentation, slide_idx: int) -> None:
 
 
 def move_slide(prs: Presentation, old_idx: int, new_idx: int) -> None:
-    """Move a slide from one position to another.
-
-    Parameters
-    ----------
-    prs : Presentation
-        The presentation object.
-    old_idx : int
-        Current zero-based index of the slide.
-    new_idx : int
-        Desired zero-based index for the slide.
+    """
+    title: Move a slide from one position to another.
+    parameters:
+      prs:
+        type: Presentation
+        description: The presentation object.
+      old_idx:
+        type: int
+        description: Current zero-based index of the slide.
+      new_idx:
+        type: int
+        description: Desired zero-based index for the slide.
     """
     sld_id_lst = prs.slides._sldIdLst
     el = sld_id_lst[old_idx]

@@ -1,4 +1,6 @@
-"""Quick smoke test for SlideBuilder."""
+"""
+title: Quick smoke test for SlideBuilder.
+"""
 
 import sys
 
