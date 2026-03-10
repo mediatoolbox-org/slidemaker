@@ -1,0 +1,8 @@
+name: slidemaker
+channels:
+  - nodefaults
+  - conda-forge
+dependencies:
+  - python 3.14.*
+  - poetry
+  - pip

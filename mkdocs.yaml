@@ -1,0 +1,63 @@
+site_name: SlideMaker
+repo_url: https://github.com/mediatoolbox-org/slidemaker
+docs_dir: ./docs
+site_dir: ./build
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - CLI: commands.md
+  - Anchor Maps: manifest.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md
+
+theme:
+  name: material
+  features:
+    - content.code.copy
+    - navigation.instant
+    - search.highlight
+    - search.suggest
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - scheme: default
+      primary: white
+      accent: lime
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: white
+      accent: lime
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - codehilite
+  - def_list
+  - footnotes
+  - md_in_html
+  - meta
+  - pymdownx.details
+  - pymdownx.highlight:
+      pygments_lang_class: true
+  - pymdownx.inlinehilite:
+      style_plain_text: python
+  - pymdownx.magiclink:
+      provider: github
+      repo_url_shortener: true
+  - pymdownx.saneheaders
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true
