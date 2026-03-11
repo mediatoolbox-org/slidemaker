@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/mediatoolbox-org/slidemaker/compare/1.0.1...1.1.0) (2026-03-11)
+
+
+### Features
+
+* Add support for placeholders ([f00b27a](https://github.com/mediatoolbox-org/slidemaker/commit/f00b27a603a358292dd72d5faa2f030a8246fd0e))
+
 ## [1.0.1](https://github.com/mediatoolbox-org/slidemaker/compare/v1.0.0...1.0.1) (2026-03-10)
 
 
