@@ -410,10 +410,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#key-sections" class="md-nav__link">
+  <a href="#generating-an-anchor-map" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Sections
+        Generating an Anchor Map
       
     </span>
   </a>
@@ -421,10 +421,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#generating-an-anchor-map" class="md-nav__link">
+  <a href="#template-placeholders" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Generating an Anchor Map
+        Template Placeholders
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-with-slidebuilder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using with SlideBuilder
       
     </span>
   </a>
@@ -531,10 +542,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#key-sections" class="md-nav__link">
+  <a href="#generating-an-anchor-map" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Key Sections
+        Generating an Anchor Map
       
     </span>
   </a>
@@ -542,10 +553,21 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#generating-an-anchor-map" class="md-nav__link">
+  <a href="#template-placeholders" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Generating an Anchor Map
+        Template Placeholders
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-with-slidebuilder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using with SlideBuilder
       
     </span>
   </a>
@@ -579,41 +601,28 @@ editable through config.</p>
 <h2 id="file-format">File Format<a class="headerlink" href="#file-format" title="Permanent link">&para;</a></h2>
 <p>Typical file: <code class="language-python highlight"><span class="n">template_anchor_map</span><span class="o">.</span><span class="n">yaml</span></code></p>
 <div class="language-yaml highlight"><pre><span></span><code><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">1</span>
-<span class="nt">default-template-page</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
-<span class="nt">title-slide</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">title-group</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Group 7</span>
-<span class="w">  </span><span class="nt">subtitle-group</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Group 4</span>
-<span class="nt">title-groups</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">1</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Group 7</span>
-<span class="w">  </span><span class="nt">2</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Group 3</span>
-<span class="w">  </span><span class="nt">3</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Group 4</span>
-<span class="nt">checkpoints</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">textbox-names</span><span class="p">:</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TextBox 34</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">TextBox 35</span>
-<span class="nt">areas</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">objectives-bullets</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">left</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.9</span>
-<span class="w">    </span><span class="nt">top</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">3.6</span>
-<span class="w">    </span><span class="nt">width</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">13.0</span>
-<span class="w">    </span><span class="nt">height</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">6.5</span>
+<span class="nt">template-default-page</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">5</span>
 </code></pre></div>
-<h2 id="key-sections">Key Sections<a class="headerlink" href="#key-sections" title="Permanent link">&para;</a></h2>
-<ul>
-<li><code class="language-python highlight"><span class="n">title</span><span class="o">-</span><span class="n">slide</span></code>: maps groups used by <code class="language-python highlight"><span class="n">add_title</span></code>.</li>
-<li><code class="language-python highlight"><span class="n">title</span><span class="o">-</span><span class="n">groups</span></code>: maps title group per template page.</li>
-<li><code class="language-python highlight"><span class="n">areas</span></code>: inches-based boxes for content placement.</li>
-<li><code class="language-python highlight"><span class="n">checkpoints</span><span class="o">.</span><span class="n">textbox</span><span class="o">-</span><span class="n">names</span></code>: maps the prebuilt checklist rows.</li>
-<li><code class="language-python highlight"><span class="n">remove</span><span class="o">-</span><span class="n">shapes</span></code>: lists placeholder shapes to remove before populating.</li>
-</ul>
 <h2 id="generating-an-anchor-map">Generating an Anchor Map<a class="headerlink" href="#generating-an-anchor-map" title="Permanent link">&para;</a></h2>
 <div class="language-bash highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>slidemaker.main<span class="w"> </span>generate-anchor-map<span class="w"> </span><span class="se">\</span>
 <span class="w">  </span>--template<span class="w"> </span>my_template.pptx<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--out<span class="w"> </span>template_anchor_map.yaml<span class="w"> </span><span class="se">\</span>
-<span class="w">  </span>--include-shape-catalog
+<span class="w">  </span>--out<span class="w"> </span>template_anchor_map.yaml
 </code></pre></div>
-<p>This inspects every slide layout in the template and writes shape names, groups,
-and suggested area coordinates.</p>
+<p>This inspects every slide in the template and writes a shape catalog with names,
+types, and text previews. Use this to identify shapes for your placeholders.</p>
+<h2 id="template-placeholders">Template Placeholders<a class="headerlink" href="#template-placeholders" title="Permanent link">&para;</a></h2>
+<p>The primary way to bind content to template shapes is through <code class="language-python highlight"><span class="p">{{</span><span class="n">placeholder</span><span class="p">}}</span></code>
+text. Place <code class="language-python highlight"><span class="p">{{</span><span class="n">title</span><span class="p">}}</span></code>, <code class="language-python highlight"><span class="p">{{</span><span class="n">body</span><span class="p">}}</span></code>, <code class="language-python highlight"><span class="p">{{</span><span class="n">subtitle</span><span class="p">}}</span></code>, etc. directly in the
+template's shape text. SlideBuilder scans all shapes (including inside Group
+shapes) and replaces matches from the <code class="language-python highlight"><span class="n">content</span></code> dict.</p>
+<p>Matching is case-insensitive: <code class="language-python highlight"><span class="p">{{</span><span class="n">TITLE</span><span class="p">}}</span></code> matches <code class="language-python highlight"><span class="n">content</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;...&quot;</span><span class="p">}</span></code>.</p>
+<h2 id="using-with-slidebuilder">Using with SlideBuilder<a class="headerlink" href="#using-with-slidebuilder" title="Permanent link">&para;</a></h2>
+<div class="language-python highlight"><pre><span></span><code><span class="n">sb</span> <span class="o">=</span> <span class="n">SlideBuilder</span><span class="p">(</span>
+    <span class="s2">&quot;my_template.pptx&quot;</span><span class="p">,</span>
+    <span class="n">template_default_page</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">anchor_map</span><span class="o">=</span><span class="s2">&quot;template_anchor_map.yaml&quot;</span><span class="p">,</span>  <span class="c1"># optional</span>
+<span class="p">)</span>
+</code></pre></div>
 
 
 
