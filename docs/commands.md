@@ -15,10 +15,5 @@ Options:
 
 - `--template`: path to the `.pptx` template (required)
 - `--out`: output YAML path (default `template_anchor_map.yaml`)
-- `--default-template-page`: base template page index (default `5`)
-- `--include-shape-catalog / --no-include-shape-catalog`: include full shape
-  names in output
-
-## `slidemaker build` (planned)
-
-Build a deck from a YAML lesson spec (not yet implemented).
+- `--template-default-page`: default template page index (default `5`)
+- `--no-shape-catalog`: omit the shape catalog from output

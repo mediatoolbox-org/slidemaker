@@ -15,19 +15,19 @@ DEFAULT_TEMPLATE_PAGE = 5
 
 
 def default_anchor_map(
-    default_template_page: int = DEFAULT_TEMPLATE_PAGE,
+    template_default_page: int = DEFAULT_TEMPLATE_PAGE,
 ) -> dict[str, Any]:
     """
     title: Return the built-in anchor map matching the default template.
     parameters:
-      default_template_page:
+      template_default_page:
         type: int
     returns:
       type: dict[str, Any]
     """
     return {
         "version": 1,
-        "default-template-page": int(default_template_page),
+        "template-default-page": int(template_default_page),
         "title-slide": {
             "title-group": "Group 7",
             "subtitle-group": "Group 4",
@@ -170,7 +170,7 @@ def _shape_catalog(template: str | Path) -> dict[int, list[dict[str, Any]]]:
 
 def generate_anchor_map(
     template: str | Path,
-    default_template_page: int = DEFAULT_TEMPLATE_PAGE,
+    template_default_page: int = DEFAULT_TEMPLATE_PAGE,
     include_shape_catalog: bool = True,
 ) -> dict[str, Any]:
     """
@@ -178,14 +178,14 @@ def generate_anchor_map(
     parameters:
       template:
         type: str | Path
-      default_template_page:
+      template_default_page:
         type: int
       include_shape_catalog:
         type: bool
     returns:
       type: dict[str, Any]
     """
-    anchor_map = default_anchor_map(default_template_page)
+    anchor_map = default_anchor_map(template_default_page)
     anchor_map["template"] = str(template)
     if include_shape_catalog:
         anchor_map["shape-catalog"] = _shape_catalog(template)

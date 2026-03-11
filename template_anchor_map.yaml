@@ -1,5 +1,5 @@
 version: 1
-default-template-page: 5
+template-default-page: 5
 title-slide:
   title-group: Group 7
   subtitle-group: Group 4

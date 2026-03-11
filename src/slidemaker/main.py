@@ -32,7 +32,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Output path for anchor map file.",
     )
     gen.add_argument(
-        "--default-template-page",
+        "--template-default-page",
         type=int,
         default=5,
         help="Default template page for generic content slides.",
@@ -53,7 +53,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         out_path = SlideBuilder.generate_anchor_map_file(
             out=args.out,
             template=args.template,
-            default_template_page=args.default_template_page,
+            template_default_page=args.template_default_page,
             include_shape_catalog=not args.no_shape_catalog,
         )
         print(f"Saved anchor map -> {out_path}")

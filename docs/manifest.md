@@ -10,42 +10,35 @@ Typical file: `template_anchor_map.yaml`
 
 ```yaml
 version: 1
-default-template-page: 5
-title-slide:
-  title-group: Group 7
-  subtitle-group: Group 4
-title-groups:
-  1: Group 7
-  2: Group 3
-  3: Group 4
-checkpoints:
-  textbox-names:
-    - TextBox 34
-    - TextBox 35
-areas:
-  objectives-bullets:
-    left: 0.9
-    top: 3.6
-    width: 13.0
-    height: 6.5
+template-default-page: 5
 ```
-
-## Key Sections
-
-- `title-slide`: maps groups used by `add_title`.
-- `title-groups`: maps title group per template page.
-- `areas`: inches-based boxes for content placement.
-- `checkpoints.textbox-names`: maps the prebuilt checklist rows.
-- `remove-shapes`: lists placeholder shapes to remove before populating.
 
 ## Generating an Anchor Map
 
 ```bash
 python -m slidemaker.main generate-anchor-map \
   --template my_template.pptx \
-  --out template_anchor_map.yaml \
-  --include-shape-catalog
+  --out template_anchor_map.yaml
 ```
 
-This inspects every slide layout in the template and writes shape names, groups,
-and suggested area coordinates.
+This inspects every slide in the template and writes a shape catalog with names,
+types, and text previews. Use this to identify shapes for your placeholders.
+
+## Template Placeholders
+
+The primary way to bind content to template shapes is through `{{placeholder}}`
+text. Place `{{title}}`, `{{body}}`, `{{subtitle}}`, etc. directly in the
+template's shape text. SlideBuilder scans all shapes (including inside Group
+shapes) and replaces matches from the `content` dict.
+
+Matching is case-insensitive: `{{TITLE}}` matches `content={"title": "..."}`.
+
+## Using with SlideBuilder
+
+```python
+sb = SlideBuilder(
+    "my_template.pptx",
+    template_default_page=5,
+    anchor_map="template_anchor_map.yaml",  # optional
+)
+```

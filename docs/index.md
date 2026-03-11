@@ -2,13 +2,13 @@
 
 `slidemaker` is a Python library for generating slide decks from PowerPoint
 templates. Built on `python-pptx`, it exposes one high-level class
-(`SlideBuilder`) that handles template loading, slide cloning, content
-population, style resolution, and final deck assembly.
+(`SlideBuilder`) that handles template loading, slide cloning, placeholder
+replacement, content layout, style resolution, and final deck assembly.
 
 ## Architecture
 
-- `src/slidemaker/core.py`: low-level text, shape, and slide utilities.
-- `src/slidemaker/anchors.py`: anchor map loading and validation.
+- `src/slidemaker/core.py`: low-level text, shape, layout, and slide utilities.
+- `src/slidemaker/anchors.py`: anchor map loading and generation.
 - `src/slidemaker/cli.py`: `SlideBuilder` high-level API.
 - `src/slidemaker/main.py`: CLI entry point.
 
@@ -18,10 +18,21 @@ population, style resolution, and final deck assembly.
 from slidemaker import SlideBuilder
 
 sb = SlideBuilder("my_template.pptx")
-sb.add_slide("Introduction", items=["Point A", "Point B"])
-sb.add_slide("Code Example", code="print('hello')")
+
+# Replace {{title}} placeholder in template slide 1
+sb.add_slide(
+    template_page=1,
+    content={"title": "Introduction", "subtitle": "Getting Started"},
+)
+
+# Create new shapes on default template page
+sb.add_slide(
+    content={"title": "Key Points"},
+    items=["Point A", "Point B"],
+)
+
 sb.save("output.pptx")
 ```
 
-See [Getting Started](getting-started.md) for setup and [CLI](commands.md) for
-command-line usage.
+See [Getting Started](getting-started.md) for setup, [CLI](commands.md) for
+command-line usage, and [Anchor Maps](manifest.md) for template configuration.

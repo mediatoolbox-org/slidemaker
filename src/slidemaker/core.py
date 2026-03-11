@@ -1272,6 +1272,230 @@ def set_notes(slide: Slide, text: str) -> None:
         tf.text = text
 
 
+_PLACEHOLDER_RE = re.compile(r"\{\{(\w+)\}\}")
+
+
+def _iter_text_shapes(slide: Slide) -> list[Any]:
+    """
+    title: Yield all shapes (including group children) that have a text frame.
+    parameters:
+      slide:
+        type: Slide
+    returns:
+      type: list[Any]
+    """
+    result: list[Any] = []
+    for shape in slide.shapes:
+        if shape.shape_type == 6:  # GROUP
+            for child in shape.shapes:  # type: ignore[attr-defined]
+                if child.has_text_frame:
+                    result.append(child)
+        elif shape.has_text_frame:
+            result.append(shape)
+    return result
+
+
+def replace_placeholders(
+    slide: Slide,
+    content: dict[str, str | list[str] | None],
+    styles: Optional[dict[str, dict[str, Any]]] = None,
+) -> None:
+    """
+    title: Scan slide shapes for ``{{key}}`` placeholders and replace them.
+    summary: |-
+      Iterates every text shape (including children of Group shapes).
+      When a shape's text matches ``{{key}}`` and *key* exists in
+      *content*, the shape content is replaced:
+
+      - ``str`` value  → replace the text.
+      - ``list[str]``  → replace with a bullet list in the same
+        position and size as the original shape.
+      - ``None``       → clear the shape text.
+
+      Per-placeholder styling is resolved from *styles* using the
+      ``#key`` convention.  The ``.slide`` entry is used as the
+      fallback for any placeholder without a dedicated ``#key`` style.
+    parameters:
+      slide:
+        type: Slide
+      content:
+        type: dict[str, str | list[str] | None]
+      styles:
+        type: Optional[dict[str, dict[str, Any]]]
+        description: >-
+          Style map with ``.slide`` as base style and ``#key`` entries for per-
+          placeholder overrides.
+    """
+    # Build case-insensitive lookup: lowercase key → original value
+    lower_content: dict[str, str | list[str] | None] = {
+        k.lower(): v for k, v in content.items()
+    }
+    base_style = dict((styles or {}).get(".slide", {}))
+
+    def _style_for(key: str) -> dict[str, Any]:
+        # Try exact #key, then lowercase #key
+        override = (styles or {}).get(f"#{key}") or (styles or {}).get(
+            f"#{key.lower()}"
+        )
+        if override is None:
+            return base_style
+        merged = dict(base_style)
+        merged.update(override)
+        return merged
+
+    for shape in _iter_text_shapes(slide):
+        text = shape.text_frame.text.strip()
+        m = _PLACEHOLDER_RE.fullmatch(text)
+        if m is None:
+            continue
+        key = m.group(1)
+        lower_key = key.lower()
+        if lower_key not in lower_content:
+            continue
+        value = lower_content[lower_key]
+        effective_style = _style_for(key)
+        if value is None:
+            set_textbox_text(shape, "")
+        elif isinstance(value, list):
+            left = shape.left
+            top = shape.top
+            width = shape.width
+            height = shape.height
+            sp = shape._element
+            sp.getparent().remove(sp)
+            add_bullet_list(
+                slide,
+                left=left,
+                top=top,
+                width=width,
+                height=height,
+                items=value,
+                style=effective_style,
+            )
+        else:
+            set_textbox_text(shape, str(value), style=effective_style)
+
+
+def layout_content_shapes(
+    slide: Slide,
+    items: list[str] | None = None,
+    code: str | None = None,
+    flow_boxes: list[dict] | None = None,
+    callout: str | None = None,
+    slide_style: Optional[dict[str, Any]] = None,
+    code_style: Optional[dict[str, Any]] = None,
+) -> None:
+    """
+    title: Add content shapes to a slide with smart layout.
+    summary: |-
+      Places shapes in the content area below the title region,
+      stacking vertically based on what is provided:
+
+      - **flow_boxes** — flow diagram at the top of content area.
+      - **items + code** — bullets on top, code below.
+      - **items only** — full content area.
+      - **code only** — full content area.
+      - **callout** — always placed below other content.
+    parameters:
+      slide:
+        type: Slide
+      items:
+        type: list[str] | None
+      code:
+        type: str | None
+      flow_boxes:
+        type: list[dict] | None
+      callout:
+        type: str | None
+      slide_style:
+        type: Optional[dict[str, Any]]
+      code_style:
+        type: Optional[dict[str, Any]]
+    """
+    slide_s = slide_style or {}
+    code_defaults: dict[str, Any] = {
+        "bg-color": "#193952",
+        "font-color": "#FFFFFF",
+        "font-size": 20,
+        "font-name": "Consolas",
+    }
+    code_defaults.update(code_style or {})
+
+    bottom: int = CONTENT_TOP
+
+    if flow_boxes:
+        add_flow_boxes(
+            slide,
+            boxes=flow_boxes,
+            left=CONTENT_LEFT,
+            top=CONTENT_TOP,
+            style=slide_s,
+        )
+        bottom = CONTENT_TOP + Inches(3.0)
+
+    elif items and code:
+        # Bullets on top, code below
+        bullets_height = Inches(3.5)
+        add_bullet_list(
+            slide,
+            left=CONTENT_LEFT,
+            top=CONTENT_TOP,
+            width=CONTENT_WIDTH,
+            height=bullets_height,
+            items=items,
+            style={**{"font-size": 26, "spacing": 10}, **slide_s},
+        )
+        code_top = CONTENT_TOP + bullets_height + Inches(0.3)
+        code_height = Inches(4.5)
+        add_code_block(
+            slide,
+            left=CONTENT_LEFT,
+            top=code_top,
+            width=CONTENT_WIDTH,
+            height=code_height,
+            code_text=code,
+            style=code_defaults,
+        )
+        bottom = code_top + code_height
+
+    elif code:
+        code_height = Inches(6.0)
+        add_code_block(
+            slide,
+            left=CONTENT_LEFT,
+            top=CONTENT_TOP,
+            width=CONTENT_WIDTH,
+            height=code_height,
+            code_text=code,
+            style=code_defaults,
+        )
+        bottom = CONTENT_TOP + code_height
+
+    elif items:
+        add_bullet_list(
+            slide,
+            left=CONTENT_LEFT,
+            top=CONTENT_TOP,
+            width=CONTENT_WIDTH,
+            height=CONTENT_HEIGHT,
+            items=items,
+            style={**{"font-size": 30, "spacing": 14}, **slide_s},
+        )
+        bottom = CONTENT_TOP + CONTENT_HEIGHT
+
+    if callout:
+        callout_top = bottom + Inches(0.3)
+        add_textbox(
+            slide,
+            left=CONTENT_LEFT,
+            top=callout_top,
+            width=CONTENT_WIDTH,
+            height=Inches(0.8),
+            text=callout,
+            style={**{"font-size": 26, "bold": True}, **slide_s},
+        )
+
+
 def clone_slide(prs: Presentation, template_idx: int) -> Slide:
     """
     title: Clone a slide from the presentation by index.
