@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/mediatoolbox-org/slidemaker/compare/1.3.0...1.4.0) (2026-03-13)
+
+
+### Features
+
+* Add support for creating markdown elements ([#3](https://github.com/mediatoolbox-org/slidemaker/issues/3)) ([73d87b8](https://github.com/mediatoolbox-org/slidemaker/commit/73d87b8a7ad58e8a0c368b8a3d33828a8c05b1c0))
+
 # [1.3.0](https://github.com/mediatoolbox-org/slidemaker/compare/1.2.0...1.3.0) (2026-03-13)
 
 
