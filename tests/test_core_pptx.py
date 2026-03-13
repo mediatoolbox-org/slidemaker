@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import unittest
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from zipfile import ZipFile
 
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
@@ -101,6 +104,8 @@ class CorePptxTests(unittest.TestCase):
         self.assertEqual(first_paragraph.space_before.pt, 4)
         self.assertEqual(first_paragraph.space_after.pt, 8)
         self.assertIn('char="-"', first_paragraph._p.xml)
+        self.assertIn('marL="', first_paragraph._p.xml)
+        self.assertIn('indent="', first_paragraph._p.xml)
 
     def test_add_markdown_textbox_supports_paragraphs_and_inline_styles(self) -> None:
         _, slide = new_slide()
@@ -111,7 +116,7 @@ class CorePptxTests(unittest.TestCase):
             Inches(0.5),
             Inches(6),
             Inches(3),
-            "# Heading\n\nParagraph with **bold**, *italic*, and `code`.\n- Bullet item",
+            "# Heading\n\nParagraph with **bold**, *italic*, and `code`.\n  - Bullet item",
             style={
                 "font-size": 22,
                 "font-color": "#112233",
@@ -138,6 +143,47 @@ class CorePptxTests(unittest.TestCase):
 
         self.assertEqual(paragraphs[2].text, "Bullet item")
         self.assertIn("buChar", paragraphs[2]._p.xml)
+        self.assertIn('lvl="1"', paragraphs[2]._p.xml)
+        self.assertIn('marL="', paragraphs[2]._p.xml)
+        self.assertIn('indent="', paragraphs[2]._p.xml)
+
+    def test_add_markdown_textbox_serializes_nested_real_bullets(self) -> None:
+        prs, slide = new_slide()
+
+        textbox = core.add_markdown_textbox(
+            slide,
+            Inches(0.5),
+            Inches(0.5),
+            Inches(6),
+            Inches(3),
+            "- Parent\n  - Child\n    - Grandchild",
+            style={"bullet-char": "-"},
+        )
+
+        paragraphs = textbox.text_frame.paragraphs
+        self.assertEqual(
+            [paragraph.text for paragraph in paragraphs],
+            ["Parent", "Child", "Grandchild"],
+        )
+        self.assertIn('char="-"', paragraphs[0]._p.xml)
+        self.assertIn('lvl="0"', paragraphs[0]._p.xml)
+        self.assertIn('lvl="1"', paragraphs[1]._p.xml)
+        self.assertIn('lvl="2"', paragraphs[2]._p.xml)
+
+        with TemporaryDirectory() as tmpdir:
+            out_path = Path(tmpdir) / "markdown-bullets.pptx"
+            prs.save(out_path)
+            with ZipFile(out_path) as pptx_zip:
+                slide_xml = pptx_zip.read("ppt/slides/slide1.xml").decode("utf-8")
+
+        self.assertGreaterEqual(slide_xml.count('<a:buChar char="-"/>'), 3)
+        self.assertIn('lvl="0"', slide_xml)
+        self.assertIn('lvl="1"', slide_xml)
+        self.assertIn('lvl="2"', slide_xml)
+        self.assertIn('marL="304800"', slide_xml)
+        self.assertIn('marL="533400"', slide_xml)
+        self.assertIn('marL="762000"', slide_xml)
+        self.assertIn('indent="-228600"', slide_xml)
 
     def test_add_shape_rect_and_code_block(self) -> None:
         _, slide = new_slide()

@@ -240,6 +240,8 @@ style={
 - `bullet-char`
 - `bold-prefixes`
 
+These keys also apply to bullet paragraphs inside `markdown` blocks.
+
 ### Code block keys
 
 - `bg-color` (or `fill-color`)
@@ -324,7 +326,8 @@ Supported markdown subset:
 
 - paragraphs separated by blank lines
 - `#`, `##`, `###` headings
-- unordered bullets with `-` or `*`
+- unordered bullets with `-` or `*` rendered as real PowerPoint bullets
+- nested bullets using two leading spaces per level
 - inline `**bold**`, `*italic*`, and `` `code` ``
 
 ## Inline Markdown in Bullets
