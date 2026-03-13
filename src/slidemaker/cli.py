@@ -208,6 +208,7 @@ class SlideBuilder:
         self,
         content: dict[str, str | list[str] | None] | None = None,
         items: list[str] | None = None,
+        markdown: str | None = None,
         code: str | None = None,
         table: dict[str, Any] | None = None,
         image: str | Path | dict[str, Any] | None = None,
@@ -224,8 +225,8 @@ class SlideBuilder:
 
           - **Replace** — pass ``content`` to replace existing
             ``{{placeholder}}`` text in the cloned template shapes.
-          - **Create** — pass ``items``, ``code``, ``table``, ``image``,
-            ``flow_boxes``, or ``callout`` to add new shapes on top
+          - **Create** — pass ``items``, ``markdown``, ``code``, ``table``,
+            ``image``, ``flow_boxes``, or ``callout`` to add new shapes on top
             of the cloned slide.
         parameters:
           content:
@@ -237,6 +238,9 @@ class SlideBuilder:
           items:
             type: list[str] | None
             description: Bullet point strings (creates new shapes).
+          markdown:
+            type: str | None
+            description: Markdown text block (creates a new shape).
           code:
             type: str | None
             description: Source code for a dark code block.
@@ -288,11 +292,12 @@ class SlideBuilder:
             replace_placeholders(new_slide, content, styles=styles)
 
         # ── Create new shapes with smart layout ───────────────
-        if items or code or table or image or flow_boxes or callout:
+        if items or markdown or code or table or image or flow_boxes or callout:
             remove_generated_content_placeholders(new_slide)
             layout_content_shapes(
                 new_slide,
                 items=items,
+                markdown=markdown,
                 code=code,
                 table=table,
                 image=image,

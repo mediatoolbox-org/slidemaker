@@ -54,6 +54,9 @@ _ALIGNMENTS = {
 }
 _CODE_LINE_PREFIX_RE = re.compile(r"^\s{0,2}\d+\s{1,2}")
 _INLINE_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
+_INLINE_MARKDOWN_RE = re.compile(r"(\*\*[^*\n]+\*\*|`[^`\n]+`|\*[^*\n]+\*)")
+_MARKDOWN_HEADING_RE = re.compile(r"^(#{1,3})\s+(.*)$")
+_MARKDOWN_BULLET_RE = re.compile(r"^[-*]\s+(.*)$")
 
 
 def _normalize_style(style: Optional[dict[str, Any]]) -> dict[str, Any]:
@@ -486,6 +489,44 @@ def _markdown_bold_segments(text: str) -> list[tuple[str, bool]]:
     return segments
 
 
+def _markdown_inline_segments(text: str) -> list[tuple[str, bool, bool, bool]]:
+    """
+    title: Split inline markdown into styled text segments.
+    summary: |-
+      Supports a small inline subset used in generated text blocks:
+      ``**bold**``, ``*italic*``, and `` `code` ``.
+    parameters:
+      text:
+        type: str
+    returns:
+      type: list[tuple[str, bool, bool, bool]]
+    """
+    segments: list[tuple[str, bool, bool, bool]] = []
+    last = 0
+    for match in _INLINE_MARKDOWN_RE.finditer(text):
+        if match.start() > last:
+            plain = text[last : match.start()]
+            if plain:
+                segments.append((plain, False, False, False))
+
+        token = match.group(0)
+        if token.startswith("**") and token.endswith("**"):
+            segments.append((token[2:-2], True, False, False))
+        elif token.startswith("`") and token.endswith("`"):
+            segments.append((token[1:-1], False, False, True))
+        else:
+            segments.append((token[1:-1], False, True, False))
+        last = match.end()
+
+    tail = text[last:]
+    if tail:
+        segments.append((tail, False, False, False))
+
+    if not segments and text:
+        segments.append((text, False, False, False))
+    return segments
+
+
 def _resolve_padding(
     normalized: dict[str, Any],
     default: Optional[int] = None,
@@ -814,6 +855,139 @@ def add_textbox(
         p.line_spacing = resolved_line_spacing
     for run in p.runs:
         _apply_run_letter_spacing(run, resolved_letter_spacing)
+    return txbox
+
+
+def add_markdown_textbox(
+    slide: Slide,
+    left: int,
+    top: int,
+    width: int,
+    height: int,
+    markdown_text: str,
+    style: Optional[dict[str, Any]] = None,
+) -> object:
+    """
+    title: Add a free-form markdown text block to a slide.
+    summary: |-
+      Supports paragraphs, ``#``/``##``/``###`` headings, unordered
+      list items using ``-`` or ``*``, and inline ``**bold**``,
+      ``*italic*``, and `` `code` `` markup.
+    parameters:
+      slide:
+        type: Slide
+      left:
+        type: int
+      top:
+        type: int
+      width:
+        type: int
+      height:
+        type: int
+      markdown_text:
+        type: str
+      style:
+        type: Optional[dict[str, Any]]
+    returns:
+      type: object
+      description: The newly created text box shape.
+    """
+    normalized = _normalize_style(style)
+    resolved_font_size = _as_pt(normalized.get("font-size"), BODY_FONT_SIZE)
+    resolved_font_color = _as_rgb_color(normalized.get("font-color"), FONT_COLOR)
+    resolved_font_name_raw = normalized.get("font-name", FONT_NAME)
+    resolved_font_name = (
+        FONT_NAME if resolved_font_name_raw is None else str(resolved_font_name_raw)
+    )
+    resolved_bold = _as_bool(normalized.get("bold"), False)
+    resolved_italic = _as_bool(normalized.get("italic"), False)
+    resolved_alignment = _as_alignment(
+        normalized.get("alignment", normalized.get("align")),
+        PP_ALIGN.LEFT,
+    )
+    resolved_spacing = _as_pt(
+        normalized.get("spacing", normalized.get("space-after")),
+        Pt(10),
+    )
+    resolved_space_before = _as_pt(normalized.get("space-before"), Pt(0))
+    resolved_line_spacing = _resolve_line_spacing(
+        normalized.get("line-spacing", normalized.get("line-height")),
+        resolved_font_size,
+    )
+    resolved_letter_spacing = _resolve_letter_spacing(
+        normalized.get("letter-spacing"),
+        resolved_font_size,
+    )
+    resolved_uppercase = _resolve_uppercase(normalized, False)
+    resolved_bullet_char = str(normalized.get("bullet-char", "•"))
+
+    txbox = slide.shapes.add_textbox(left, top, width, height)  # type: ignore[arg-type]
+    tf = txbox.text_frame
+    tf.word_wrap = True
+    _apply_text_frame_padding(tf, normalized)
+
+    lines = markdown_text.strip("\n").split("\n")
+    first_paragraph = True
+    paragraph_gap = False
+    base_font_size_pt = _font_size_pt(resolved_font_size) or BODY_FONT_SIZE.pt
+
+    for raw_line in lines:
+        stripped = raw_line.strip()
+        if not stripped:
+            paragraph_gap = True
+            continue
+
+        p = tf.paragraphs[0] if first_paragraph else tf.add_paragraph()
+        first_paragraph = False
+        p.alignment = resolved_alignment
+        p.space_after = resolved_spacing
+        p.space_before = resolved_spacing if paragraph_gap else resolved_space_before
+        if resolved_line_spacing is not None:
+            p.line_spacing = resolved_line_spacing
+
+        heading_match = _MARKDOWN_HEADING_RE.match(stripped)
+        bullet_match = _MARKDOWN_BULLET_RE.match(stripped)
+        heading_level: int | None = None
+        paragraph_text = stripped
+        if heading_match is not None:
+            heading_level = min(3, len(heading_match.group(1)))
+            paragraph_text = heading_match.group(2).strip()
+        elif bullet_match is not None:
+            paragraph_text = bullet_match.group(1).strip()
+            pPr = p._p.get_or_add_pPr()
+            for child in list(pPr):
+                if child.tag.endswith(("}buNone", "}buAutoNum", "}buChar", "}buBlip")):
+                    pPr.remove(child)
+            bu_char = OxmlElement("a:buChar")
+            bu_char.set("char", resolved_bullet_char)
+            pPr.append(bu_char)
+
+        paragraph_text = _apply_uppercase(paragraph_text, resolved_uppercase)
+        paragraph_font_size = resolved_font_size
+        paragraph_bold = resolved_bold
+        if heading_level is not None:
+            heading_size_map = {
+                1: Pt(base_font_size_pt + 8),
+                2: Pt(base_font_size_pt + 4),
+                3: Pt(base_font_size_pt + 2),
+            }
+            paragraph_font_size = heading_size_map[heading_level]
+            paragraph_bold = True
+
+        for segment_text, is_bold, is_italic, is_code in _markdown_inline_segments(
+            paragraph_text
+        ):
+            run = p.add_run()
+            run.text = segment_text
+            run.font.size = paragraph_font_size
+            run.font.color.rgb = resolved_font_color
+            run.font.name = CODE_FONT if is_code else resolved_font_name
+            run.font.bold = bool(paragraph_bold or is_bold)
+            run.font.italic = bool(resolved_italic or is_italic)
+            _apply_run_letter_spacing(run, resolved_letter_spacing)
+
+        paragraph_gap = False
+
     return txbox
 
 
@@ -1780,6 +1954,7 @@ def _split_content_height(
 def layout_content_shapes(
     slide: Slide,
     items: list[str] | None = None,
+    markdown: str | None = None,
     code: str | None = None,
     table: Optional[dict[str, Any]] = None,
     image: str | Path | dict[str, Any] | None = None,
@@ -1799,11 +1974,15 @@ def layout_content_shapes(
 
       - **flow_boxes** — flow diagram at the top of content area.
       - **items + code** — bullets on top, code below.
+      - **markdown + code** — markdown text on top, code below.
       - **items + table** — bullets on top, table below.
+      - **markdown + table** — markdown text on top, table below.
       - **code + table** — code on top, table below.
       - **items + image** — bullets on top, image below.
+      - **markdown + image** — markdown text on top, image below.
       - **code + image** — code on top, image below.
       - **items only** — full content area.
+      - **markdown only** — full content area.
       - **code only** — full content area.
       - **table only** — full content area.
       - **image only** — full content area.
@@ -1813,6 +1992,8 @@ def layout_content_shapes(
         type: Slide
       items:
         type: list[str] | None
+      markdown:
+        type: str | None
       code:
         type: str | None
       table:
@@ -1838,16 +2019,26 @@ def layout_content_shapes(
         raise TypeError("table must be a dictionary")
     if image is not None and not isinstance(image, (str, Path, dict)):
         raise TypeError("image must be a path string, Path, or dictionary")
+    if markdown is not None and not isinstance(markdown, str):
+        raise TypeError("markdown must be a string")
+    if markdown and items:
+        raise ValueError("markdown cannot be combined with items")
     if table and flow_boxes:
         raise ValueError("table cannot be combined with flow_boxes")
+    if markdown and flow_boxes:
+        raise ValueError("markdown cannot be combined with flow_boxes")
     if table and items and code:
         raise ValueError("table can be combined with items or code, not both")
+    if table and markdown and (items or code):
+        raise ValueError("table can be combined with one of items, markdown, or code")
     if image and flow_boxes:
         raise ValueError("image cannot be combined with flow_boxes")
     if image and table:
         raise ValueError("image cannot be combined with table")
     if image and items and code:
         raise ValueError("image can be combined with items or code, not both")
+    if image and markdown and (items or code):
+        raise ValueError("image can be combined with one of items, markdown, or code")
 
     slide_s = slide_style or {}
     code_defaults: dict[str, Any] = {
@@ -1996,6 +2187,35 @@ def layout_content_shapes(
         )
         bottom = CONTENT_TOP + Inches(3.0)
 
+    elif markdown and code:
+        markdown_height, code_height = _split_content_height(
+            main_height,
+            ratio=0.40,
+            gap=section_gap,
+            min_first=Inches(2.0),
+            min_second=Inches(2.8),
+        )
+        add_markdown_textbox(
+            slide,
+            left=CONTENT_LEFT,
+            top=CONTENT_TOP,
+            width=CONTENT_WIDTH,
+            height=markdown_height,
+            markdown_text=markdown,
+            style={**{"font-size": 24, "spacing": 12}, **slide_s},
+        )
+        code_top = CONTENT_TOP + markdown_height + section_gap
+        add_code_block(
+            slide,
+            left=CONTENT_LEFT,
+            top=code_top,
+            width=CONTENT_WIDTH,
+            height=code_height,
+            code_text=code,
+            style=code_defaults,
+        )
+        bottom = code_top + code_height
+
     elif items and code:
         bullets_height, code_height = _split_content_height(
             main_height,
@@ -2046,6 +2266,27 @@ def layout_content_shapes(
         place_table(table_top, table_height)
         bottom = table_top + table_height
 
+    elif markdown and table:
+        markdown_height, table_height = _split_content_height(
+            main_height,
+            ratio=0.36,
+            gap=section_gap,
+            min_first=Inches(2.0),
+            min_second=Inches(2.8),
+        )
+        add_markdown_textbox(
+            slide,
+            left=CONTENT_LEFT,
+            top=CONTENT_TOP,
+            width=CONTENT_WIDTH,
+            height=markdown_height,
+            markdown_text=markdown,
+            style={**{"font-size": 24, "spacing": 12}, **slide_s},
+        )
+        table_top = CONTENT_TOP + markdown_height + section_gap
+        place_table(table_top, table_height)
+        bottom = table_top + table_height
+
     elif code and table:
         code_height, table_height = _split_content_height(
             main_height,
@@ -2088,6 +2329,27 @@ def layout_content_shapes(
         place_image(image_top, image_height)
         bottom = image_top + image_height
 
+    elif markdown and image:
+        markdown_height, image_height = _split_content_height(
+            main_height,
+            ratio=0.36,
+            gap=section_gap,
+            min_first=Inches(2.0),
+            min_second=Inches(2.8),
+        )
+        add_markdown_textbox(
+            slide,
+            left=CONTENT_LEFT,
+            top=CONTENT_TOP,
+            width=CONTENT_WIDTH,
+            height=markdown_height,
+            markdown_text=markdown,
+            style={**{"font-size": 24, "spacing": 12}, **slide_s},
+        )
+        image_top = CONTENT_TOP + markdown_height + section_gap
+        place_image(image_top, image_height)
+        bottom = image_top + image_height
+
     elif code and image:
         code_height, image_height = _split_content_height(
             main_height,
@@ -2115,6 +2377,18 @@ def layout_content_shapes(
 
     elif image:
         place_image(CONTENT_TOP, main_height)
+        bottom = CONTENT_TOP + main_height
+
+    elif markdown:
+        add_markdown_textbox(
+            slide,
+            left=CONTENT_LEFT,
+            top=CONTENT_TOP,
+            width=CONTENT_WIDTH,
+            height=main_height,
+            markdown_text=markdown,
+            style={**{"font-size": 26, "spacing": 14}, **slide_s},
+        )
         bottom = CONTENT_TOP + main_height
 
     elif code:

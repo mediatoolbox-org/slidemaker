@@ -74,6 +74,16 @@ results = list(collection.find(query))""",
         )
 
         sb.add_slide(
+            content={"title": "Narrative Summary"},
+            markdown=(
+                "# Why This Matters\n\n"
+                "The ETL pipeline keeps **data movement** and *transformation* clear.\n"
+                "- Reproducible steps\n"
+                "- Easier debugging"
+            ),
+        )
+
+        sb.add_slide(
             content={"title": "Items And Table"},
             items=[
                 "Key",
@@ -108,7 +118,7 @@ results = list(collection.find(query))""",
             sb.save(str(out_path))
             prs = Presentation(str(out_path))
 
-        self.assertEqual(len(prs.slides), 6)
+        self.assertEqual(len(prs.slides), 7)
 
         flow_text = "\n".join(slide_texts(prs.slides[0]))
         self.assertIn("EXTRACT", flow_text)
@@ -125,25 +135,30 @@ results = list(collection.find(query))""",
         self.assertEqual(table_frame.table.cell(1, 0).text, "_id")
         self.assertEqual(table_frame.table.cell(2, 2).text, "Stored in UTC")
 
+        narrative_text = "\n".join(slide_texts(prs.slides[3]))
+        self.assertIn("Why This Matters", narrative_text)
+        self.assertIn("data movement", narrative_text)
+        self.assertIn("Reproducible steps", narrative_text)
+
         items_table_frame = next(
-            shape for shape in prs.slides[3].shapes if shape.has_table
+            shape for shape in prs.slides[4].shapes if shape.has_table
         )
         self.assertEqual(items_table_frame.table.cell(1, 1).text, "Primary key")
 
-        code_table_text = "\n".join(slide_texts(prs.slides[4]))
+        code_table_text = "\n".join(slide_texts(prs.slides[5]))
         self.assertIn('doc = {"_id": 1}', code_table_text)
         code_table_frame = next(
-            shape for shape in prs.slides[4].shapes if shape.has_table
+            shape for shape in prs.slides[5].shapes if shape.has_table
         )
         self.assertEqual(code_table_frame.table.cell(1, 1).text, "1")
 
-        image_slide_text = "\n".join(slide_texts(prs.slides[5]))
+        image_slide_text = "\n".join(slide_texts(prs.slides[6]))
         self.assertIn("Validation AUC improved", image_slide_text)
         self.assertIn("Validation confusion matrix", image_slide_text)
         self.assertTrue(
             any(
                 shape.shape_type == MSO_SHAPE_TYPE.PICTURE
-                for shape in prs.slides[5].shapes
+                for shape in prs.slides[6].shapes
             )
         )
 

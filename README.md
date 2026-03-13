@@ -74,22 +74,27 @@ Placeholder matching is **case-insensitive**: `{{TITLE}}`, `{{Title}}`, and
 
 ### New shapes
 
-Pass `items`, `code`, `table`, `image`, `flow_boxes`, or `callout` to create new
-shapes on top of the cloned slide. These are laid out automatically:
+Pass `items`, `markdown`, `code`, `table`, `image`, `flow_boxes`, or `callout`
+to create new shapes on top of the cloned slide. These are laid out
+automatically:
 
-| Combination       | Layout                           |
-| ----------------- | -------------------------------- |
-| `flow_boxes`      | Flow diagram at content top      |
-| `items` + `code`  | Bullets on top, code block below |
-| `items` + `table` | Bullets on top, table below      |
-| `code` + `table`  | Code block on top, table below   |
-| `items` + `image` | Bullets on top, image below      |
-| `code` + `image`  | Code block on top, image below   |
-| `items` only      | Full content area                |
-| `code` only       | Full content area                |
-| `table` only      | Full content area                |
-| `image` only      | Full content area                |
-| `callout`         | Placed below other content       |
+| Combination          | Layout                            |
+| -------------------- | --------------------------------- |
+| `flow_boxes`         | Flow diagram at content top       |
+| `items` + `code`     | Bullets on top, code block below  |
+| `markdown` + `code`  | Markdown on top, code block below |
+| `items` + `table`    | Bullets on top, table below       |
+| `markdown` + `table` | Markdown on top, table below      |
+| `code` + `table`     | Code block on top, table below    |
+| `items` + `image`    | Bullets on top, image below       |
+| `markdown` + `image` | Markdown on top, image below      |
+| `code` + `image`     | Code block on top, image below    |
+| `items` only         | Full content area                 |
+| `markdown` only      | Full content area                 |
+| `code` only          | Full content area                 |
+| `table` only         | Full content area                 |
+| `image` only         | Full content area                 |
+| `callout`            | Placed below other content        |
 
 Both modes (placeholder replacement and new shapes) can be used together on the
 same slide.
@@ -97,7 +102,8 @@ same slide.
 `table` can be combined with either `items` or `code`, but not both, and it
 cannot be combined with `flow_boxes`. `image` can be combined with either
 `items` or `code`, but not both, and it cannot be combined with `table` or
-`flow_boxes`.
+`flow_boxes`. `markdown` can be combined with `code`, `table`, or `image`, but
+not with `items` or `flow_boxes`.
 
 ## SlideBuilder API
 
@@ -126,6 +132,7 @@ SlideBuilder(
 sb.add_slide(
     content={"title": "Slide Title", "body": ["Point A", "Point B"]},
     items=None,
+    markdown=None,
     code=None,
     table=None,
     image=None,
@@ -139,6 +146,7 @@ sb.add_slide(
 
 - `content`: dict of placeholder replacements (`{{key}}` in template).
 - `items`: bullet points (creates new shapes).
+- `markdown`: free-form markdown block (creates new shape).
 - `code`: source code block (creates new shape).
 - `table`: generated table definition (creates new shape).
 - `image`: image path or image spec (creates new shape).
@@ -301,6 +309,24 @@ image={
 }
 ```
 
+## Markdown Format
+
+```python
+markdown = """# Why This Matters
+
+This pipeline keeps **data movement** and *transformation* clear.
+- Reproducible steps
+- Easier debugging
+"""
+```
+
+Supported markdown subset:
+
+- paragraphs separated by blank lines
+- `#`, `##`, `###` headings
+- unordered bullets with `-` or `*`
+- inline `**bold**`, `*italic*`, and `` `code` ``
+
 ## Inline Markdown in Bullets
 
 Bullet items support inline bold with `**...**`:
@@ -320,7 +346,8 @@ Every `add_slide` call accepts `notes="..."` for speaker notes.
 
 `slidemaker.core` provides lower-level helpers:
 
-- text: `add_textbox`, `set_textbox_text`, `add_bullet_list`, `add_code_block`
+- text: `add_textbox`, `set_textbox_text`, `add_bullet_list`,
+  `add_markdown_textbox`, `add_code_block`
 - media: `add_image`
 - tables: `add_table`
 - layout: `layout_content_shapes`

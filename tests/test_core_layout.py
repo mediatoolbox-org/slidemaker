@@ -40,6 +40,14 @@ class LayoutContentShapeTests(unittest.TestCase):
         ):
             core.layout_content_shapes(slide, image=123)  # type: ignore[arg-type]
 
+        with self.assertRaisesRegex(TypeError, "markdown must be a string"):
+            core.layout_content_shapes(slide, markdown=123)  # type: ignore[arg-type]
+
+        with self.assertRaisesRegex(
+            ValueError, "markdown cannot be combined with items"
+        ):
+            core.layout_content_shapes(slide, items=["A"], markdown="Body")
+
         with self.assertRaisesRegex(
             ValueError, "image cannot be combined with flow_boxes"
         ):
@@ -62,6 +70,35 @@ class LayoutContentShapeTests(unittest.TestCase):
             core.layout_content_shapes(
                 slide,
                 items=["A"],
+                code="print('x')",
+                image=SAMPLE_IMAGE,
+            )
+
+        with self.assertRaisesRegex(
+            ValueError, "markdown cannot be combined with flow_boxes"
+        ):
+            core.layout_content_shapes(
+                slide,
+                markdown="Body",
+                flow_boxes=[{"label": "A"}],
+            )
+
+        with self.assertRaisesRegex(
+            ValueError, "table can be combined with one of items, markdown, or code"
+        ):
+            core.layout_content_shapes(
+                slide,
+                markdown="Body",
+                code="print('x')",
+                table={"columns": ["A"], "rows": [["1"]]},
+            )
+
+        with self.assertRaisesRegex(
+            ValueError, "image can be combined with one of items, markdown, or code"
+        ):
+            core.layout_content_shapes(
+                slide,
+                markdown="Body",
                 code="print('x')",
                 image=SAMPLE_IMAGE,
             )
@@ -113,6 +150,26 @@ class LayoutContentShapeTests(unittest.TestCase):
         )
         self.assertTrue(bullet_kwargs["style"]["italic"])
         self.assertTrue(code_kwargs["style"]["line-numbers"])
+
+    def test_layout_places_markdown_and_code_without_overlap(self) -> None:
+        _, slide = new_slide()
+
+        with (
+            patch("slidemaker.core.add_markdown_textbox") as add_markdown_textbox,
+            patch("slidemaker.core.add_code_block") as add_code_block,
+        ):
+            core.layout_content_shapes(
+                slide,
+                markdown="# Intro\n\nBody text",
+                code="print('x')",
+            )
+
+        markdown_kwargs = add_markdown_textbox.call_args.kwargs
+        code_kwargs = add_code_block.call_args.kwargs
+        self.assertEqual(markdown_kwargs["markdown_text"], "# Intro\n\nBody text")
+        self.assertGreater(
+            code_kwargs["top"], markdown_kwargs["top"] + markdown_kwargs["height"]
+        )
 
     def test_layout_places_items_and_table_with_merged_styles(self) -> None:
         _, slide = new_slide()
@@ -213,6 +270,25 @@ class LayoutContentShapeTests(unittest.TestCase):
             table_kwargs["top"], code_kwargs["top"] + code_kwargs["height"]
         )
 
+    def test_layout_places_markdown_and_table_without_overlap(self) -> None:
+        _, slide = new_slide()
+
+        with (
+            patch("slidemaker.core.add_markdown_textbox") as add_markdown_textbox,
+            patch("slidemaker.core.add_table") as add_table,
+        ):
+            core.layout_content_shapes(
+                slide,
+                markdown="Paragraph text",
+                table={"columns": ["Field"], "rows": [["Value"]]},
+            )
+
+        markdown_kwargs = add_markdown_textbox.call_args.kwargs
+        table_kwargs = add_table.call_args.kwargs
+        self.assertGreater(
+            table_kwargs["top"], markdown_kwargs["top"] + markdown_kwargs["height"]
+        )
+
     def test_layout_places_code_and_image_without_overlap(self) -> None:
         _, slide = new_slide()
 
@@ -232,17 +308,38 @@ class LayoutContentShapeTests(unittest.TestCase):
             image_kwargs["top"], code_kwargs["top"] + code_kwargs["height"]
         )
 
+    def test_layout_places_markdown_and_image_without_overlap(self) -> None:
+        _, slide = new_slide()
+
+        with (
+            patch("slidemaker.core.add_markdown_textbox") as add_markdown_textbox,
+            patch("slidemaker.core.add_image") as add_image,
+        ):
+            core.layout_content_shapes(
+                slide,
+                markdown="Paragraph text",
+                image=SAMPLE_IMAGE,
+            )
+
+        markdown_kwargs = add_markdown_textbox.call_args.kwargs
+        image_kwargs = add_image.call_args.kwargs
+        self.assertGreater(
+            image_kwargs["top"], markdown_kwargs["top"] + markdown_kwargs["height"]
+        )
+
     def test_layout_places_single_content_shapes(self) -> None:
         _, slide = new_slide()
 
         with (
             patch("slidemaker.core.add_bullet_list") as add_bullet_list,
+            patch("slidemaker.core.add_markdown_textbox") as add_markdown_textbox,
             patch("slidemaker.core.add_code_block") as add_code_block,
             patch("slidemaker.core.add_table") as add_table,
             patch("slidemaker.core.add_image") as add_image,
             patch("slidemaker.core.add_textbox") as add_textbox,
         ):
             core.layout_content_shapes(slide, items=["A"])
+            core.layout_content_shapes(slide, markdown="Paragraph")
             core.layout_content_shapes(slide, code="print('x')")
             core.layout_content_shapes(
                 slide, table={"columns": ["Field"], "rows": [["Value"]]}
@@ -253,11 +350,15 @@ class LayoutContentShapeTests(unittest.TestCase):
             )
 
         self.assertEqual(add_bullet_list.call_count, 1)
+        self.assertEqual(add_markdown_textbox.call_count, 1)
         self.assertEqual(add_code_block.call_count, 1)
         self.assertEqual(add_table.call_count, 1)
         self.assertEqual(add_image.call_count, 1)
         self.assertEqual(
             add_bullet_list.call_args.kwargs["height"], core.CONTENT_HEIGHT
+        )
+        self.assertEqual(
+            add_markdown_textbox.call_args.kwargs["height"], core.CONTENT_HEIGHT
         )
         self.assertEqual(add_code_block.call_args.kwargs["height"], core.CONTENT_HEIGHT)
         self.assertEqual(add_table.call_args.kwargs["height"], core.CONTENT_HEIGHT)
