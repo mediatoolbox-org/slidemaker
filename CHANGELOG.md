@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/mediatoolbox-org/slidemaker/compare/1.1.0...1.2.0) (2026-03-13)
+
+
+### Features
+
+* Add support for table ([#1](https://github.com/mediatoolbox-org/slidemaker/issues/1)) ([9d0916e](https://github.com/mediatoolbox-org/slidemaker/commit/9d0916ea4152ae682aa4acc592c938be027888a9))
+
 # [1.1.0](https://github.com/mediatoolbox-org/slidemaker/compare/1.0.1...1.1.0) (2026-03-11)
 
 
