@@ -56,7 +56,7 @@ _CODE_LINE_PREFIX_RE = re.compile(r"^\s{0,2}\d+\s{1,2}")
 _INLINE_BOLD_RE = re.compile(r"\*\*(.+?)\*\*")
 _INLINE_MARKDOWN_RE = re.compile(r"(\*\*[^*\n]+\*\*|`[^`\n]+`|\*[^*\n]+\*)")
 _MARKDOWN_HEADING_RE = re.compile(r"^(#{1,3})\s+(.*)$")
-_MARKDOWN_BULLET_RE = re.compile(r"^[-*]\s+(.*)$")
+_MARKDOWN_BULLET_RE = re.compile(r"^(\s*)[-*]\s+(.*)$")
 
 
 def _normalize_style(style: Optional[dict[str, Any]]) -> dict[str, Any]:
@@ -593,6 +593,38 @@ def _apply_run_letter_spacing(run: Any, spacing: Optional[int]) -> None:
     r_pr.set("spc", str(spacing))
 
 
+def _apply_paragraph_bullet(
+    paragraph: Any,
+    bullet_char: str,
+    level: int = 0,
+) -> None:
+    """
+    title: Apply bullet formatting to a paragraph with hanging indentation.
+    parameters:
+      paragraph:
+        type: Any
+      bullet_char:
+        type: str
+      level:
+        type: int
+    """
+    normalized_level = max(0, min(int(level), 8))
+    left_margin = int(Pt(24 + (normalized_level * 18)))
+    hanging_indent = -int(Pt(18))
+
+    pPr = paragraph._p.get_or_add_pPr()
+    for child in list(pPr):
+        if child.tag.endswith(("}buNone", "}buAutoNum", "}buChar", "}buBlip")):
+            pPr.remove(child)
+    pPr.set("lvl", str(normalized_level))
+    pPr.set("marL", str(left_margin))
+    pPr.set("indent", str(hanging_indent))
+
+    bu_char = OxmlElement("a:buChar")
+    bu_char.set("char", bullet_char)
+    pPr.append(bu_char)
+
+
 def find_group_textbox(slide: Slide, group_name: str) -> Any:
     """
     title: Find the first TextBox inside a named Group shape.
@@ -871,8 +903,9 @@ def add_markdown_textbox(
     title: Add a free-form markdown text block to a slide.
     summary: |-
       Supports paragraphs, ``#``/``##``/``###`` headings, unordered
-      list items using ``-`` or ``*``, and inline ``**bold**``,
-      ``*italic*``, and `` `code` `` markup.
+      list items using ``-`` or ``*`` as real PowerPoint bullets,
+      nested bullets via two-space indentation, and inline
+      ``**bold**``, ``*italic*``, and `` `code` `` markup.
     parameters:
       slide:
         type: Slide
@@ -932,7 +965,8 @@ def add_markdown_textbox(
     base_font_size_pt = _font_size_pt(resolved_font_size) or BODY_FONT_SIZE.pt
 
     for raw_line in lines:
-        stripped = raw_line.strip()
+        line = raw_line.rstrip()
+        stripped = line.strip()
         if not stripped:
             paragraph_gap = True
             continue
@@ -946,21 +980,18 @@ def add_markdown_textbox(
             p.line_spacing = resolved_line_spacing
 
         heading_match = _MARKDOWN_HEADING_RE.match(stripped)
-        bullet_match = _MARKDOWN_BULLET_RE.match(stripped)
+        bullet_match = _MARKDOWN_BULLET_RE.match(line)
         heading_level: int | None = None
+        bullet_level = 0
         paragraph_text = stripped
         if heading_match is not None:
             heading_level = min(3, len(heading_match.group(1)))
             paragraph_text = heading_match.group(2).strip()
         elif bullet_match is not None:
-            paragraph_text = bullet_match.group(1).strip()
-            pPr = p._p.get_or_add_pPr()
-            for child in list(pPr):
-                if child.tag.endswith(("}buNone", "}buAutoNum", "}buChar", "}buBlip")):
-                    pPr.remove(child)
-            bu_char = OxmlElement("a:buChar")
-            bu_char.set("char", resolved_bullet_char)
-            pPr.append(bu_char)
+            leading_spaces = len(bullet_match.group(1).expandtabs(2))
+            bullet_level = leading_spaces // 2
+            paragraph_text = bullet_match.group(2).strip()
+            _apply_paragraph_bullet(p, resolved_bullet_char, bullet_level)
 
         paragraph_text = _apply_uppercase(paragraph_text, resolved_uppercase)
         paragraph_font_size = resolved_font_size
@@ -1120,14 +1151,7 @@ def add_bullet_list(
         if resolved_line_spacing is not None:
             p.line_spacing = resolved_line_spacing
 
-        # Configure a real paragraph bullet (not a text prefix).
-        pPr = p._p.get_or_add_pPr()
-        for child in list(pPr):
-            if child.tag.endswith(("}buNone", "}buAutoNum", "}buChar", "}buBlip")):
-                pPr.remove(child)
-        bu_char = OxmlElement("a:buChar")
-        bu_char.set("char", resolved_bullet_char)
-        pPr.append(bu_char)
+        _apply_paragraph_bullet(p, resolved_bullet_char)
 
         item_text = _apply_uppercase(item.strip(), resolved_uppercase)
         if resolved_bold_prefixes:
