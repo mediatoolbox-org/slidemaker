@@ -8,9 +8,7 @@ replacement, content layout, style resolution, and final deck assembly.
 ## Architecture
 
 - `src/slidemaker/core.py`: low-level text, shape, layout, and slide utilities.
-- `src/slidemaker/anchors.py`: anchor map loading and generation.
 - `src/slidemaker/cli.py`: `SlideBuilder` high-level API.
-- `src/slidemaker/main.py`: CLI entry point.
 
 ## Quick Start
 
@@ -34,5 +32,4 @@ sb.add_slide(
 sb.save("output.pptx")
 ```
 
-See [Getting Started](getting-started.md) for setup, [CLI](commands.md) for
-command-line usage, and [Anchor Maps](manifest.md) for template configuration.
+See [Getting Started](getting-started.md) for setup and examples.
