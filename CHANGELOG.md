@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/mediatoolbox-org/slidemaker/compare/1.4.0...1.4.1) (2026-03-13)
+
+
+### Bug Fixes
+
+* Fix bullet points rendering in markdown content ([#4](https://github.com/mediatoolbox-org/slidemaker/issues/4)) ([2b64861](https://github.com/mediatoolbox-org/slidemaker/commit/2b648611a9f603c67dc26bad72d4d52d66086758))
+
 # [1.4.0](https://github.com/mediatoolbox-org/slidemaker/compare/1.3.0...1.4.0) (2026-03-13)
 
 
