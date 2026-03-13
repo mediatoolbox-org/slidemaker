@@ -5,8 +5,9 @@ import unittest
 from pathlib import Path
 
 from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
 
-from tests._util import TEMPLATE, slide_texts
+from tests._util import SAMPLE_IMAGE, TEMPLATE, slide_texts
 
 from slidemaker import SlideBuilder
 
@@ -93,12 +94,21 @@ results = list(collection.find(query))""",
             },
         )
 
+        sb.add_slide(
+            content={"title": "Model Chart"},
+            items=["Validation AUC improved", "Class separation is clearer"],
+            image={
+                "path": SAMPLE_IMAGE,
+                "caption": "Validation confusion matrix",
+            },
+        )
+
         with tempfile.TemporaryDirectory() as tmpdir:
             out_path = Path(tmpdir) / "rich-smoke.pptx"
             sb.save(str(out_path))
             prs = Presentation(str(out_path))
 
-        self.assertEqual(len(prs.slides), 5)
+        self.assertEqual(len(prs.slides), 6)
 
         flow_text = "\n".join(slide_texts(prs.slides[0]))
         self.assertIn("EXTRACT", flow_text)
@@ -126,6 +136,16 @@ results = list(collection.find(query))""",
             shape for shape in prs.slides[4].shapes if shape.has_table
         )
         self.assertEqual(code_table_frame.table.cell(1, 1).text, "1")
+
+        image_slide_text = "\n".join(slide_texts(prs.slides[5]))
+        self.assertIn("Validation AUC improved", image_slide_text)
+        self.assertIn("Validation confusion matrix", image_slide_text)
+        self.assertTrue(
+            any(
+                shape.shape_type == MSO_SHAPE_TYPE.PICTURE
+                for shape in prs.slides[5].shapes
+            )
+        )
 
 
 if __name__ == "__main__":

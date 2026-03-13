@@ -210,6 +210,7 @@ class SlideBuilder:
         items: list[str] | None = None,
         code: str | None = None,
         table: dict[str, Any] | None = None,
+        image: str | Path | dict[str, Any] | None = None,
         flow_boxes: list[dict] | None = None,
         callout: str | None = None,
         notes: str = "",
@@ -223,7 +224,7 @@ class SlideBuilder:
 
           - **Replace** — pass ``content`` to replace existing
             ``{{placeholder}}`` text in the cloned template shapes.
-          - **Create** — pass ``items``, ``code``, ``table``,
+          - **Create** — pass ``items``, ``code``, ``table``, ``image``,
             ``flow_boxes``, or ``callout`` to add new shapes on top
             of the cloned slide.
         parameters:
@@ -246,6 +247,13 @@ class SlideBuilder:
               ``columns`` (optional header row), ``rows``, optional
               ``column_widths``/``row_heights``, optional ``banded_rows``, and
               optional ``style``/``header_style``/``cell_style``.
+          image:
+            type: str | Path | dict[str, Any] | None
+            description: >-
+              Image path or image specification for a generated picture shape.
+              Dict form supports ``path``/``src``, optional ``caption``,
+              optional ``fit`` (``contain`` or ``stretch``), and optional
+              ``caption_style``.
           flow_boxes:
             type: list[dict] | None
             description: Flow-diagram boxes (label, desc, optional style).
@@ -280,13 +288,14 @@ class SlideBuilder:
             replace_placeholders(new_slide, content, styles=styles)
 
         # ── Create new shapes with smart layout ───────────────
-        if items or code or table or flow_boxes or callout:
+        if items or code or table or image or flow_boxes or callout:
             remove_generated_content_placeholders(new_slide)
             layout_content_shapes(
                 new_slide,
                 items=items,
                 code=code,
                 table=table,
+                image=image,
                 flow_boxes=flow_boxes,
                 callout=callout,
                 slide_style=styles.get(".slide"),

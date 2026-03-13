@@ -9,15 +9,17 @@ from __future__ import annotations
 
 import copy
 import re
+from pathlib import Path
 from typing import Any, Optional
 
+from pptx.dml.color import RGBColor
 from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.text import PP_ALIGN
 from pptx.oxml.xmlchemy import OxmlElement
+from pptx.parts.image import Image as PptxImage
 from pptx.presentation import Presentation
 from pptx.slide import Slide
 from pptx.util import Inches, Pt, Emu
-from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN
 
 
 # ── Style constants ─────────────────────────────────────────────
@@ -1185,6 +1187,77 @@ def add_code_block(
         _apply_run_letter_spacing(run, resolved_letter_spacing)
 
 
+def add_image(
+    slide: Slide,
+    left: int,
+    top: int,
+    width: int,
+    height: int,
+    image_file: str | Path,
+    fit: str = "contain",
+) -> object:
+    """
+    title: Add an image to a slide, scaled within a target rectangle.
+    summary: |-
+      ``fit="contain"`` preserves aspect ratio and centers the image
+      inside the target rectangle. ``fit="stretch"`` fills the target
+      rectangle exactly.
+    parameters:
+      slide:
+        type: Slide
+      left:
+        type: int
+      top:
+        type: int
+      width:
+        type: int
+      height:
+        type: int
+      image_file:
+        type: str | Path
+      fit:
+        type: str
+    returns:
+      type: object
+      description: The created picture shape.
+    """
+    image_path = Path(image_file)
+    if not image_path.is_file():
+        raise FileNotFoundError(str(image_path))
+
+    fit_mode = fit.strip().lower()
+    if fit_mode not in {"contain", "stretch"}:
+        raise ValueError("image fit must be 'contain' or 'stretch'")
+
+    if fit_mode == "stretch":
+        return slide.shapes.add_picture(
+            str(image_path),
+            Emu(left),
+            Emu(top),
+            Emu(width),
+            Emu(height),
+        )
+
+    image = PptxImage.from_file(str(image_path))
+    pixel_width, pixel_height = image.size
+    if pixel_width <= 0 or pixel_height <= 0:
+        raise ValueError("image dimensions must be positive")
+
+    scale = min(width / pixel_width, height / pixel_height)
+    picture_width = max(1, int(round(pixel_width * scale)))
+    picture_height = max(1, int(round(pixel_height * scale)))
+    picture_left = left + max(0, int(round((width - picture_width) / 2)))
+    picture_top = top + max(0, int(round((height - picture_height) / 2)))
+
+    return slide.shapes.add_picture(
+        str(image_path),
+        Emu(picture_left),
+        Emu(picture_top),
+        Emu(picture_width),
+        Emu(picture_height),
+    )
+
+
 def add_table(
     slide: Slide,
     left: int,
@@ -1709,6 +1782,7 @@ def layout_content_shapes(
     items: list[str] | None = None,
     code: str | None = None,
     table: Optional[dict[str, Any]] = None,
+    image: str | Path | dict[str, Any] | None = None,
     flow_boxes: list[dict] | None = None,
     callout: str | None = None,
     slide_style: Optional[dict[str, Any]] = None,
@@ -1727,9 +1801,12 @@ def layout_content_shapes(
       - **items + code** — bullets on top, code below.
       - **items + table** — bullets on top, table below.
       - **code + table** — code on top, table below.
+      - **items + image** — bullets on top, image below.
+      - **code + image** — code on top, image below.
       - **items only** — full content area.
       - **code only** — full content area.
       - **table only** — full content area.
+      - **image only** — full content area.
       - **callout** — always placed below other content.
     parameters:
       slide:
@@ -1740,6 +1817,8 @@ def layout_content_shapes(
         type: str | None
       table:
         type: Optional[dict[str, Any]]
+      image:
+        type: str | Path | dict[str, Any] | None
       flow_boxes:
         type: list[dict] | None
       callout:
@@ -1757,10 +1836,18 @@ def layout_content_shapes(
     """
     if table is not None and not isinstance(table, dict):
         raise TypeError("table must be a dictionary")
+    if image is not None and not isinstance(image, (str, Path, dict)):
+        raise TypeError("image must be a path string, Path, or dictionary")
     if table and flow_boxes:
         raise ValueError("table cannot be combined with flow_boxes")
     if table and items and code:
         raise ValueError("table can be combined with items or code, not both")
+    if image and flow_boxes:
+        raise ValueError("image cannot be combined with flow_boxes")
+    if image and table:
+        raise ValueError("image cannot be combined with table")
+    if image and items and code:
+        raise ValueError("image can be combined with items or code, not both")
 
     slide_s = slide_style or {}
     code_defaults: dict[str, Any] = {
@@ -1777,6 +1864,70 @@ def layout_content_shapes(
     reserved_callout = section_gap + callout_height if callout else 0
     main_height = max(Inches(1.0), CONTENT_HEIGHT - reserved_callout)
     bottom: int = CONTENT_TOP
+
+    def place_image(image_top: int, image_height: int) -> None:
+        assert image is not None
+
+        fit = "contain"
+        caption: str | None = None
+        caption_style: Optional[dict[str, Any]] = None
+        if isinstance(image, dict):
+            image_path = _table_spec_value(image, "path", "src")
+            fit_value = _table_spec_value(image, "fit", default="contain")
+            caption = _table_spec_value(image, "caption")
+            caption_style = _table_spec_value(
+                image,
+                "caption_style",
+                "caption-style",
+            )
+            if not isinstance(fit_value, str):
+                raise TypeError("image fit must be a string")
+            fit = fit_value
+        else:
+            image_path = image
+
+        if not isinstance(image_path, (str, Path)):
+            raise TypeError("image path must be a string or Path")
+        if caption is not None and not isinstance(caption, str):
+            raise TypeError("image caption must be a string")
+        if caption_style is not None and not isinstance(caption_style, dict):
+            raise TypeError("image caption_style must be a dictionary")
+
+        caption_gap = Inches(0.15)
+        caption_height = Inches(0.6)
+        reserved_caption = caption_gap + caption_height if caption else 0
+        picture_height = max(1, image_height - reserved_caption)
+        add_image(
+            slide,
+            left=CONTENT_LEFT,
+            top=image_top,
+            width=CONTENT_WIDTH,
+            height=picture_height,
+            image_file=image_path,
+            fit=fit,
+        )
+        if caption:
+            effective_caption_style = _merge_style(
+                {
+                    "font-size": 18,
+                    "alignment": "center",
+                    "italic": True,
+                },
+                slide_s,
+            )
+            effective_caption_style = _merge_style(
+                effective_caption_style,
+                caption_style,
+            )
+            add_textbox(
+                slide,
+                left=CONTENT_LEFT,
+                top=image_top + picture_height + caption_gap,
+                width=CONTENT_WIDTH,
+                height=caption_height,
+                text=caption,
+                style=effective_caption_style,
+            )
 
     def place_table(table_top: int, table_height: int) -> None:
         assert table is not None
@@ -1916,8 +2067,54 @@ def layout_content_shapes(
         place_table(table_top, table_height)
         bottom = table_top + table_height
 
+    elif items and image:
+        bullets_height, image_height = _split_content_height(
+            main_height,
+            ratio=0.36,
+            gap=section_gap,
+            min_first=Inches(2.0),
+            min_second=Inches(2.8),
+        )
+        add_bullet_list(
+            slide,
+            left=CONTENT_LEFT,
+            top=CONTENT_TOP,
+            width=CONTENT_WIDTH,
+            height=bullets_height,
+            items=items,
+            style={**{"font-size": 26, "spacing": 10}, **slide_s},
+        )
+        image_top = CONTENT_TOP + bullets_height + section_gap
+        place_image(image_top, image_height)
+        bottom = image_top + image_height
+
+    elif code and image:
+        code_height, image_height = _split_content_height(
+            main_height,
+            ratio=0.40,
+            gap=section_gap,
+            min_first=Inches(2.4),
+            min_second=Inches(2.8),
+        )
+        add_code_block(
+            slide,
+            left=CONTENT_LEFT,
+            top=CONTENT_TOP,
+            width=CONTENT_WIDTH,
+            height=code_height,
+            code_text=code,
+            style=code_defaults,
+        )
+        image_top = CONTENT_TOP + code_height + section_gap
+        place_image(image_top, image_height)
+        bottom = image_top + image_height
+
     elif table:
         place_table(CONTENT_TOP, main_height)
+        bottom = CONTENT_TOP + main_height
+
+    elif image:
+        place_image(CONTENT_TOP, main_height)
         bottom = CONTENT_TOP + main_height
 
     elif code:
