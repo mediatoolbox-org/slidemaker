@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/mediatoolbox-org/slidemaker/compare/1.2.0...1.3.0) (2026-03-13)
+
+
+### Features
+
+* Add support for image ([#2](https://github.com/mediatoolbox-org/slidemaker/issues/2)) ([d040ab4](https://github.com/mediatoolbox-org/slidemaker/commit/d040ab4fd067045604b72719816ae39f8973f0c9))
+
 # [1.2.0](https://github.com/mediatoolbox-org/slidemaker/compare/1.1.0...1.2.0) (2026-03-13)
 
 
