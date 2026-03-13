@@ -1,53 +1,52 @@
-"""
-title: Test rich content in SlideBuilder (code, flow, callout).
-"""
-
 from __future__ import annotations
 
-import sys
+import tempfile
+import unittest
+from pathlib import Path
 
-sys.path.insert(0, "src")
+from pptx import Presentation
 
-from slidemaker import SlideBuilder  # noqa: E402
+from tests._util import TEMPLATE, slide_texts
 
-TEMPLATE = "tests/data/template.pptx"
+from slidemaker import SlideBuilder
 
-sb = SlideBuilder(TEMPLATE, template_default_page=4)
 
-# ── Flow diagram slide ──────────────────────────────────────
-sb.add_slide(
-    content={"title": "The ETL Paradigm"},
-    flow_boxes=[
-        {
-            "label": "EXTRACT",
-            "desc": "Retrieve raw data\nfrom a source",
-            "style": {"fill-color": "#2E86AB"},
-        },
-        {
-            "label": "TRANSFORM",
-            "desc": "Clean, filter, enrich\nor reshape",
-            "style": {"fill-color": "#48A99A"},
-        },
-        {
-            "label": "LOAD",
-            "desc": "Write results to\na destination",
-            "style": {"fill-color": "#E86F51"},
-        },
-    ],
-    callout="Separating stages makes each one independently testable and swappable",
-    notes="ETL stands for Extract Transform Load.",
-)
+class RichSlideBuilderTests(unittest.TestCase):
+    def test_build_deck_with_flow_code_and_table_content(self) -> None:
+        sb = SlideBuilder(TEMPLATE, template_default_page=4)
 
-# ── Bullets + code block slide ──────────────────────────────
-sb.add_slide(
-    content={"title": "Extract: Date-Range Queries in MongoDB"},
-    items=[
-        "Convert date string to Timestamp with pd.to_datetime",
-        "Compute end of day with pd.DateOffset(days=1)",
-        "Use $gte and $lt for a half-open interval",
-        "Combine date filter with field filter",
-    ],
-    code="""start = pd.to_datetime("2022-05-02",
+        sb.add_slide(
+            content={"title": "The ETL Paradigm"},
+            flow_boxes=[
+                {
+                    "label": "EXTRACT",
+                    "desc": "Retrieve raw data\nfrom a source",
+                    "style": {"fill-color": "#2E86AB"},
+                },
+                {
+                    "label": "TRANSFORM",
+                    "desc": "Clean, filter, enrich\nor reshape",
+                    "style": {"fill-color": "#48A99A"},
+                },
+                {
+                    "label": "LOAD",
+                    "desc": "Write results to\na destination",
+                    "style": {"fill-color": "#E86F51"},
+                },
+            ],
+            callout="Separating stages makes each one independently testable and swappable",
+            notes="ETL stands for Extract Transform Load.",
+        )
+
+        sb.add_slide(
+            content={"title": "Extract: Date-Range Queries in MongoDB"},
+            items=[
+                "Convert date string to Timestamp with pd.to_datetime",
+                "Compute end of day with pd.DateOffset(days=1)",
+                "Use $gte and $lt for a half-open interval",
+                "Combine date filter with field filter",
+            ],
+            code="""start = pd.to_datetime("2022-05-02",
                        format="%Y-%m-%d")
 end = start + pd.DateOffset(days=1)
 query = {
@@ -55,137 +54,79 @@ query = {
     "admissionsQuiz": "incomplete",
 }
 results = list(collection.find(query))""",
-    notes="The extract step.",
-)
+            notes="The extract step.",
+        )
 
-# ── Bullets + code block slide ──────────────────────────────
-sb.add_slide(
-    content={"title": "Transform: Randomised Group Assignment"},
-    items=[
-        "random.seed(42) makes the split reproducible",
-        "random.shuffle(observations) reorders in place",
-        "Integer division len(obs) // 2 finds the midpoint",
-        "First half -> control, second half -> treatment",
-    ],
-    code="""random.seed(42)
-random.shuffle(observations)
-mid = len(observations) // 2
-for doc in observations[:mid]:
-    doc["inExperiment"] = True
-    doc["group"] = "no email (control)"
-for doc in observations[mid:]:
-    doc["inExperiment"] = True
-    doc["group"] = "email (treatment)" """,
-    notes="Transform step.",
-)
+        sb.add_slide(
+            content={"title": "MongoDB Field Reference"},
+            table={
+                "columns": ["Field", "Type", "Notes"],
+                "rows": [
+                    ["_id", "ObjectId", "Primary key"],
+                    ["createdAt", "datetime", "Stored in UTC"],
+                    ["admissionsQuiz", "string", "Completion status"],
+                ],
+                "column_widths": [2.3, 2.0, 5.7],
+                "banded_rows": True,
+            },
+            notes="Table layout smoke test.",
+        )
 
-# ── Bullets only slide ──────────────────────────────────────
-sb.add_slide(
-    content={"title": "Transform: Exporting Treatment Emails to CSV"},
-    items=[
-        "Convert assigned documents to DataFrame",
-        'Add a tracking column "tag" with a fixed value',
-        "Filter with boolean mask for treatment group",
-        "Build dated filename with strftime",
-        "Save selected columns with to_csv(index=False)",
-    ],
-    notes="Secondary transform step.",
-)
+        sb.add_slide(
+            content={"title": "Items And Table"},
+            items=[
+                "Key",
+                "Document",
+            ],
+            table={
+                "columns": ["Field", "Meaning"],
+                "rows": [["_id", "Primary key"], ["createdAt", "Timestamp"]],
+            },
+        )
 
-# ── Bullets + code block slide ──────────────────────────────
-sb.add_slide(
-    content={"title": "Load: Updating Documents with update_one"},
-    items=[
-        "update_one(filter, update) modifies one document",
-        'Filter identifies the target: {"_id": doc["_id"]}',
-        '{"$set": doc} adds or overwrites fields',
-        "matched_count = 1 if filter found a document",
-        "modified_count = 0 on a second run",
-    ],
-    code="""for doc in observations:
-    result = collection.update_one(
-        {"_id": doc["_id"]},
-        {"$set": doc},
-    )""",
-    notes="Load step.",
-)
+        sb.add_slide(
+            content={"title": "Code And Table"},
+            code='doc = {"_id": 1}',
+            table={
+                "columns": ["Field", "Value"],
+                "rows": [["_id", "1"]],
+            },
+        )
 
-# ── Bullets + code block slide ──────────────────────────────
-sb.add_slide(
-    content={"title": "Python Classes: Bundling Data and Behaviour"},
-    items=[
-        "A class groups attributes and methods into one object",
-        "__init__ runs at creation time and sets instance attributes via self",
-        "Methods receive self as their first argument",
-        "You already use classes: DataFrame has .shape, .head(), .describe()",
-    ],
-    code="""class Greeter:
-    def __init__(self, name="World"):
-        self.name = name
+        with tempfile.TemporaryDirectory() as tmpdir:
+            out_path = Path(tmpdir) / "rich-smoke.pptx"
+            sb.save(str(out_path))
+            prs = Presentation(str(out_path))
 
-    def greet(self):
-        return f"Hello, {self.name}!"
+        self.assertEqual(len(prs.slides), 5)
 
-g = Greeter("Data Science")
-print(g.greet())""",
-    notes="Python classes intro.",
-)
+        flow_text = "\n".join(slide_texts(prs.slides[0]))
+        self.assertIn("EXTRACT", flow_text)
+        self.assertIn(
+            "Separating stages makes each one independently testable", flow_text
+        )
 
-# ── Flow diagram slide ──────────────────────────────────────
-sb.add_slide(
-    content={"title": "Building the MongoRepository Class"},
-    flow_boxes=[
-        {
-            "label": "__init__",
-            "desc": "Stores\nself.collection",
-            "style": {"fill-color": "#193952"},
-        },
-        {
-            "label": "find_by_date",
-            "desc": "Extract step\nusing self.collection",
-            "style": {"fill-color": "#2E86AB"},
-        },
-        {
-            "label": "update_applicants",
-            "desc": "Load step\nreturns summary dict",
-            "style": {"fill-color": "#48A99A"},
-        },
-        {
-            "label": "assign_to_groups",
-            "desc": "Full ETL\nin one call",
-            "style": {"fill-color": "#E86F51"},
-        },
-    ],
-    callout="One method call does the entire ETL pipeline",
-    notes="MongoRepository class overview.",
-)
+        code_text = "\n".join(slide_texts(prs.slides[1]))
+        self.assertIn("start = pd.to_datetime", code_text)
+        self.assertIn("Combine date filter with field filter", code_text)
 
-# ── Bullets only slide ──────────────────────────────────────
-sb.add_slide(
-    content={"title": "Inspecting Unfamiliar Objects with dir"},
-    items=[
-        "dir(obj) lists all attributes and methods",
-        'Filter internals: [a for a in dir(obj) if not a.startswith("_")]',
-        "Useful for PyMongo return types like UpdateResult",
-        "Check raw_result for the full MongoDB response",
-    ],
-    notes="Object inspection.",
-)
+        table_frame = next(shape for shape in prs.slides[2].shapes if shape.has_table)
+        self.assertEqual(table_frame.table.cell(0, 0).text, "Field")
+        self.assertEqual(table_frame.table.cell(1, 0).text, "_id")
+        self.assertEqual(table_frame.table.cell(2, 2).text, "Stored in UTC")
 
-# ── Table slide ──────────────────────────────────────────────
-sb.add_slide(
-    content={"title": "MongoDB Field Reference"},
-    table={
-        "columns": ["Field", "Type", "Notes"],
-        "rows": [
-            ["_id", "ObjectId", "Primary key"],
-            ["createdAt", "datetime", "Stored in UTC"],
-            ["admissionsQuiz", "string", "Completion status"],
-        ],
-        "column_widths": [2.3, 2.0, 5.7],
-        "banded_rows": True,
-    },
-    notes="Table layout smoke test.",
-)
+        items_table_frame = next(
+            shape for shape in prs.slides[3].shapes if shape.has_table
+        )
+        self.assertEqual(items_table_frame.table.cell(1, 1).text, "Primary key")
 
-sb.save("/tmp/test_rich_output.pptx")
+        code_table_text = "\n".join(slide_texts(prs.slides[4]))
+        self.assertIn('doc = {"_id": 1}', code_table_text)
+        code_table_frame = next(
+            shape for shape in prs.slides[4].shapes if shape.has_table
+        )
+        self.assertEqual(code_table_frame.table.cell(1, 1).text, "1")
+
+
+if __name__ == "__main__":
+    unittest.main()
