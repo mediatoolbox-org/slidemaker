@@ -108,6 +108,7 @@ class SlideBuilderTests(unittest.TestCase):
             builder.add_slide(
                 content={"title": "Hello"},
                 items=["One"],
+                markdown="Intro paragraph",
                 code="print('x')",
                 table={"columns": ["A"], "rows": [["1"]]},
                 image={"path": SAMPLE_IMAGE, "caption": "Chart"},
@@ -127,6 +128,7 @@ class SlideBuilderTests(unittest.TestCase):
         layout_content_shapes.assert_called_once()
         _, kwargs = layout_content_shapes.call_args
         self.assertEqual(kwargs["slide_style"], style[".slide"])
+        self.assertEqual(kwargs["markdown"], "Intro paragraph")
         self.assertEqual(kwargs["code_style"], style[".code"])
         self.assertEqual(kwargs["table_style"], style[".table"])
         self.assertEqual(kwargs["table_header_style"], style[".table-header"])

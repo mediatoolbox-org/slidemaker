@@ -102,6 +102,43 @@ class CorePptxTests(unittest.TestCase):
         self.assertEqual(first_paragraph.space_after.pt, 8)
         self.assertIn('char="-"', first_paragraph._p.xml)
 
+    def test_add_markdown_textbox_supports_paragraphs_and_inline_styles(self) -> None:
+        _, slide = new_slide()
+
+        textbox = core.add_markdown_textbox(
+            slide,
+            Inches(0.5),
+            Inches(0.5),
+            Inches(6),
+            Inches(3),
+            "# Heading\n\nParagraph with **bold**, *italic*, and `code`.\n- Bullet item",
+            style={
+                "font-size": 22,
+                "font-color": "#112233",
+                "padding": "4pt",
+            },
+        )
+
+        paragraphs = textbox.text_frame.paragraphs
+        self.assertEqual(len(paragraphs), 3)
+        self.assertEqual(paragraphs[0].text, "Heading")
+        self.assertGreater(paragraphs[0].runs[0].font.size.pt, 22)
+        self.assertTrue(paragraphs[0].runs[0].font.bold)
+        self.assertEqual(textbox.text_frame.margin_left, Pt(4))
+
+        paragraph_text = "".join(run.text for run in paragraphs[1].runs)
+        self.assertEqual(paragraph_text, "Paragraph with bold, italic, and code.")
+        bold_run = next(run for run in paragraphs[1].runs if run.text == "bold")
+        italic_run = next(run for run in paragraphs[1].runs if run.text == "italic")
+        code_run = next(run for run in paragraphs[1].runs if run.text == "code")
+        self.assertTrue(bold_run.font.bold)
+        self.assertTrue(italic_run.font.italic)
+        self.assertEqual(code_run.font.name, core.CODE_FONT)
+        self.assertEqual(rgb_hex(code_run.font.color.rgb), "112233")
+
+        self.assertEqual(paragraphs[2].text, "Bullet item")
+        self.assertIn("buChar", paragraphs[2]._p.xml)
+
     def test_add_shape_rect_and_code_block(self) -> None:
         _, slide = new_slide()
 
