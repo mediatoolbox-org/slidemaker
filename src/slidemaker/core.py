@@ -160,6 +160,64 @@ def _as_pt(value: Any, default: Optional[int] = None) -> Optional[int]:
     return default
 
 
+def _as_length(value: Any, default: Optional[int] = None) -> Optional[int]:
+    """
+    title: Parse a PowerPoint length into EMU.
+    summary: |-
+      Numeric values are treated as inches for layout-oriented inputs
+      such as table column widths and row heights. Strings may use
+      ``in``, ``pt``, or ``emu`` suffixes.
+    parameters:
+      value:
+        type: Any
+      default:
+        type: Optional[int]
+    returns:
+      type: Optional[int]
+    """
+    if value is None:
+        return default
+
+    emu = getattr(value, "emu", None)
+    if emu is not None:
+        try:
+            return int(emu)
+        except (TypeError, ValueError):
+            return default
+
+    if isinstance(value, bool):
+        return default
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return Inches(float(value))
+    if isinstance(value, str):
+        text = value.strip().lower()
+        if text.endswith("pt"):
+            text = text[:-2].strip()
+            try:
+                return Pt(float(text))
+            except ValueError:
+                return default
+        if text.endswith("in"):
+            text = text[:-2].strip()
+            try:
+                return Inches(float(text))
+            except ValueError:
+                return default
+        if text.endswith("emu"):
+            text = text[:-3].strip()
+            try:
+                return int(text)
+            except ValueError:
+                return default
+        try:
+            return Inches(float(text))
+        except ValueError:
+            return default
+    return default
+
+
 def _font_size_pt(font_size: Any) -> Optional[float]:
     """
     title: Extract font size in points from a ``Length`` value.
@@ -986,6 +1044,22 @@ def add_shape_rect(
     return shp
 
 
+def _set_fill_color(target: Any, color: Optional[RGBColor]) -> None:
+    """
+    title: Apply a solid fill or clear the background fill.
+    parameters:
+      target:
+        type: Any
+      color:
+        type: Optional[RGBColor]
+    """
+    if color is None:
+        target.fill.background()
+        return
+    target.fill.solid()
+    target.fill.fore_color.rgb = color
+
+
 def add_code_block(
     slide: Slide,
     left: int,
@@ -1109,6 +1183,167 @@ def add_code_block(
         run.font.name = resolved_font_name
         run.font.bold = resolved_bold
         _apply_run_letter_spacing(run, resolved_letter_spacing)
+
+
+def add_table(
+    slide: Slide,
+    left: int,
+    top: int,
+    width: int,
+    height: int,
+    rows: list[list[Any]],
+    columns: Optional[list[Any]] = None,
+    column_widths: Optional[list[Any]] = None,
+    row_heights: Optional[list[Any]] = None,
+    banded_rows: Optional[bool] = None,
+    style: Optional[dict[str, Any]] = None,
+    header_style: Optional[dict[str, Any]] = None,
+    cell_style: Optional[dict[str, Any]] = None,
+) -> object:
+    """
+    title: Add a table shape to a slide.
+    summary: |-
+      The table may include an optional header row via ``columns``.
+      Table-level style keys apply to all cells. ``header_style`` and
+      ``cell_style`` provide more specific text/fill overrides.
+      Numeric ``column_widths`` and ``row_heights`` are interpreted as inches.
+    parameters:
+      slide:
+        type: Slide
+      left:
+        type: int
+      top:
+        type: int
+      width:
+        type: int
+      height:
+        type: int
+      rows:
+        type: list[list[Any]]
+      columns:
+        type: Optional[list[Any]]
+      column_widths:
+        type: Optional[list[Any]]
+      row_heights:
+        type: Optional[list[Any]]
+      banded_rows:
+        type: Optional[bool]
+      style:
+        type: Optional[dict[str, Any]]
+      header_style:
+        type: Optional[dict[str, Any]]
+      cell_style:
+        type: Optional[dict[str, Any]]
+    returns:
+      type: object
+      description: The created table graphic frame.
+    """
+    normalized = _normalize_style(style)
+    header_values = ["" if value is None else str(value) for value in (columns or [])]
+
+    body_rows: list[list[str]] = []
+    for row in rows:
+        if not isinstance(row, list):
+            raise TypeError("table rows must be lists")
+        body_rows.append(["" if value is None else str(value) for value in row])
+
+    col_count = len(header_values)
+    if col_count == 0 and body_rows:
+        col_count = len(body_rows[0])
+    if col_count == 0:
+        raise ValueError("table must define at least one column")
+
+    if header_values and len(header_values) != col_count:
+        raise ValueError("table columns must all have the same length")
+
+    for row in body_rows:
+        if len(row) != col_count:
+            raise ValueError("table rows must all match the number of columns")
+
+    header_row_count = 1 if header_values else 0
+    total_rows = len(body_rows) + header_row_count
+    if total_rows == 0:
+        raise ValueError("table must contain at least one row")
+
+    frame = slide.shapes.add_table(
+        total_rows,
+        col_count,
+        Emu(left),
+        Emu(top),
+        Emu(width),
+        Emu(height),
+    )
+    table = frame.table
+    table.first_row = bool(header_values)
+    resolved_banded_rows = (
+        _as_bool(banded_rows, False)
+        if banded_rows is not None
+        else _as_bool(normalized.get("banded-rows"), False)
+    )
+    table.horz_banding = bool(resolved_banded_rows)
+
+    if column_widths is not None:
+        if len(column_widths) != col_count:
+            raise ValueError("column_widths must match the number of columns")
+        for idx, raw_width in enumerate(column_widths):
+            resolved_width = _as_length(raw_width)
+            if resolved_width is None or resolved_width <= 0:
+                raise ValueError("column_widths entries must be positive lengths")
+            table.columns[idx].width = resolved_width
+
+    if row_heights is not None:
+        if len(row_heights) != total_rows:
+            raise ValueError(
+                "row_heights must match the total number of header and body rows"
+            )
+        for idx, raw_height in enumerate(row_heights):
+            resolved_height = _as_length(raw_height)
+            if resolved_height is None or resolved_height <= 0:
+                raise ValueError("row_heights entries must be positive lengths")
+            table.rows[idx].height = resolved_height
+
+    table_style = dict(normalized)
+    effective_header_style = _merge_style(
+        table_style,
+        {
+            "bold": True,
+            "alignment": "center",
+            "fill-color": "#193952",
+            "font-color": "#FFFFFF",
+        },
+    )
+    effective_header_style = _merge_style(effective_header_style, header_style)
+    effective_cell_style = _merge_style(table_style, cell_style)
+
+    default_body_fill = _as_rgb_color(effective_cell_style.get("fill-color"))
+    banded_row_fill = _as_rgb_color(
+        effective_cell_style.get("banded-row-fill-color")
+        or table_style.get("banded-row-fill-color")
+    )
+
+    def apply_cell_text(cell: Any, value: str, style_map: dict[str, Any]) -> None:
+        cell.text_frame.word_wrap = True
+        set_textbox_text(cell, value, style=style_map)
+        _set_fill_color(cell, _as_rgb_color(style_map.get("fill-color")))
+
+    row_idx = 0
+    if header_values:
+        for col_idx, value in enumerate(header_values):
+            apply_cell_text(table.cell(row_idx, col_idx), value, effective_header_style)
+        row_idx += 1
+
+    for body_idx, row_values in enumerate(body_rows):
+        row_fill = default_body_fill
+        if row_fill is None and resolved_banded_rows and banded_row_fill is not None:
+            if body_idx % 2 == 1:
+                row_fill = banded_row_fill
+        for col_idx, value in enumerate(row_values):
+            cell = table.cell(row_idx + body_idx, col_idx)
+            cell.text_frame.word_wrap = True
+            set_textbox_text(cell, value, style=effective_cell_style)
+            _set_fill_color(cell, row_fill)
+
+    return frame
 
 
 def add_flow_boxes(
@@ -1273,6 +1508,11 @@ def set_notes(slide: Slide, text: str) -> None:
 
 
 _PLACEHOLDER_RE = re.compile(r"\{\{(\w+)\}\}")
+_GENERATED_CONTENT_PLACEHOLDERS = {
+    "content body placeholder",
+    "body text",
+    "click to add text",
+}
 
 
 def _iter_text_shapes(slide: Slide) -> list[Any]:
@@ -1376,14 +1616,106 @@ def replace_placeholders(
             set_textbox_text(shape, str(value), style=effective_style)
 
 
+def remove_generated_content_placeholders(slide: Slide) -> None:
+    """
+    title: Remove stock body placeholders before adding generated content.
+    summary: |-
+      Generated content such as bullets, code blocks, and tables is
+      intended to own the main content area. This helper strips
+      unresolved template placeholder text from that area to avoid
+      visual overlap.
+    parameters:
+      slide:
+        type: Slide
+    """
+    content_threshold = CONTENT_TOP - Inches(0.3)
+
+    for shape in list(_iter_text_shapes(slide)):
+        text = shape.text_frame.text.strip()
+        if not text:
+            continue
+        lower_text = text.lower()
+        is_unresolved_placeholder = _PLACEHOLDER_RE.fullmatch(text) is not None
+        is_stock_placeholder = lower_text in _GENERATED_CONTENT_PLACEHOLDERS
+        if not is_unresolved_placeholder and not is_stock_placeholder:
+            continue
+        if getattr(shape, "top", 0) < content_threshold:
+            continue
+        sp = shape._element
+        parent = sp.getparent()
+        if parent is not None:
+            parent.remove(sp)
+
+
+def _table_spec_value(spec: dict[str, Any], *keys: str, default: Any = None) -> Any:
+    """
+    title: Read a table-spec option supporting hyphen and underscore spellings.
+    parameters:
+      spec:
+        type: dict[str, Any]
+      default:
+        type: Any
+      keys:
+        type: str
+        variadic: positional
+    returns:
+      type: Any
+    """
+    for key in keys:
+        if key in spec:
+            return spec[key]
+        alternate = key.replace("-", "_") if "-" in key else key.replace("_", "-")
+        if alternate in spec:
+            return spec[alternate]
+    return default
+
+
+def _split_content_height(
+    total_height: int,
+    ratio: float,
+    gap: int,
+    min_first: int,
+    min_second: int,
+) -> tuple[int, int]:
+    """
+    title: Split a vertical layout area into two non-overlapping sections.
+    parameters:
+      total_height:
+        type: int
+      ratio:
+        type: float
+      gap:
+        type: int
+      min_first:
+        type: int
+      min_second:
+        type: int
+    returns:
+      type: tuple[int, int]
+    """
+    available = max(1, total_height - gap)
+    desired_first = int(round(available * ratio))
+    max_first = max(1, available - min_second)
+    if max_first < min_first:
+        first = max(1, min(available - 1, desired_first))
+    else:
+        first = min(max_first, max(min_first, desired_first))
+    second = max(1, available - first)
+    return first, second
+
+
 def layout_content_shapes(
     slide: Slide,
     items: list[str] | None = None,
     code: str | None = None,
+    table: Optional[dict[str, Any]] = None,
     flow_boxes: list[dict] | None = None,
     callout: str | None = None,
     slide_style: Optional[dict[str, Any]] = None,
     code_style: Optional[dict[str, Any]] = None,
+    table_style: Optional[dict[str, Any]] = None,
+    table_header_style: Optional[dict[str, Any]] = None,
+    table_cell_style: Optional[dict[str, Any]] = None,
 ) -> None:
     """
     title: Add content shapes to a slide with smart layout.
@@ -1393,8 +1725,11 @@ def layout_content_shapes(
 
       - **flow_boxes** — flow diagram at the top of content area.
       - **items + code** — bullets on top, code below.
+      - **items + table** — bullets on top, table below.
+      - **code + table** — code on top, table below.
       - **items only** — full content area.
       - **code only** — full content area.
+      - **table only** — full content area.
       - **callout** — always placed below other content.
     parameters:
       slide:
@@ -1403,6 +1738,8 @@ def layout_content_shapes(
         type: list[str] | None
       code:
         type: str | None
+      table:
+        type: Optional[dict[str, Any]]
       flow_boxes:
         type: list[dict] | None
       callout:
@@ -1411,7 +1748,20 @@ def layout_content_shapes(
         type: Optional[dict[str, Any]]
       code_style:
         type: Optional[dict[str, Any]]
+      table_style:
+        type: Optional[dict[str, Any]]
+      table_header_style:
+        type: Optional[dict[str, Any]]
+      table_cell_style:
+        type: Optional[dict[str, Any]]
     """
+    if table is not None and not isinstance(table, dict):
+        raise TypeError("table must be a dictionary")
+    if table and flow_boxes:
+        raise ValueError("table cannot be combined with flow_boxes")
+    if table and items and code:
+        raise ValueError("table can be combined with items or code, not both")
+
     slide_s = slide_style or {}
     code_defaults: dict[str, Any] = {
         "bg-color": "#193952",
@@ -1420,8 +1770,70 @@ def layout_content_shapes(
         "font-name": "Consolas",
     }
     code_defaults.update(code_style or {})
+    base_table_style = _merge_style(slide_s, table_style)
 
+    section_gap = Inches(0.3)
+    callout_height = Inches(0.8)
+    reserved_callout = section_gap + callout_height if callout else 0
+    main_height = max(Inches(1.0), CONTENT_HEIGHT - reserved_callout)
     bottom: int = CONTENT_TOP
+
+    def place_table(table_top: int, table_height: int) -> None:
+        assert table is not None
+
+        rows = _table_spec_value(table, "rows", default=[])
+        if rows is None:
+            rows = []
+        if not isinstance(rows, list):
+            raise TypeError("table rows must be a list of row lists")
+
+        columns = _table_spec_value(table, "columns", "headers")
+        if columns is not None and not isinstance(columns, list):
+            raise TypeError("table columns must be a list")
+
+        column_widths = _table_spec_value(table, "column_widths", "column-widths")
+        if column_widths is not None and not isinstance(column_widths, list):
+            raise TypeError("table column_widths must be a list")
+
+        row_heights = _table_spec_value(table, "row_heights", "row-heights")
+        if row_heights is not None and not isinstance(row_heights, list):
+            raise TypeError("table row_heights must be a list")
+
+        local_table_style = _table_spec_value(table, "style")
+        if local_table_style is not None and not isinstance(local_table_style, dict):
+            raise TypeError("table style must be a dictionary")
+        local_header_style = _table_spec_value(table, "header_style", "header-style")
+        if local_header_style is not None and not isinstance(local_header_style, dict):
+            raise TypeError("table header_style must be a dictionary")
+        local_cell_style = _table_spec_value(table, "cell_style", "cell-style")
+        if local_cell_style is not None and not isinstance(local_cell_style, dict):
+            raise TypeError("table cell_style must be a dictionary")
+
+        effective_table_style = _merge_style(base_table_style, local_table_style)
+        effective_header_style = _merge_style(
+            _merge_style(effective_table_style, table_header_style),
+            local_header_style,
+        )
+        effective_cell_style = _merge_style(
+            _merge_style(effective_table_style, table_cell_style),
+            local_cell_style,
+        )
+
+        add_table(
+            slide,
+            left=CONTENT_LEFT,
+            top=table_top,
+            width=CONTENT_WIDTH,
+            height=table_height,
+            rows=rows,
+            columns=columns,
+            column_widths=column_widths,
+            row_heights=row_heights,
+            banded_rows=_table_spec_value(table, "banded_rows", "banded-rows"),
+            style=effective_table_style,
+            header_style=effective_header_style,
+            cell_style=effective_cell_style,
+        )
 
     if flow_boxes:
         add_flow_boxes(
@@ -1434,8 +1846,13 @@ def layout_content_shapes(
         bottom = CONTENT_TOP + Inches(3.0)
 
     elif items and code:
-        # Bullets on top, code below
-        bullets_height = Inches(3.5)
+        bullets_height, code_height = _split_content_height(
+            main_height,
+            ratio=0.40,
+            gap=section_gap,
+            min_first=Inches(2.0),
+            min_second=Inches(2.8),
+        )
         add_bullet_list(
             slide,
             left=CONTENT_LEFT,
@@ -1445,8 +1862,7 @@ def layout_content_shapes(
             items=items,
             style={**{"font-size": 26, "spacing": 10}, **slide_s},
         )
-        code_top = CONTENT_TOP + bullets_height + Inches(0.3)
-        code_height = Inches(4.5)
+        code_top = CONTENT_TOP + bullets_height + section_gap
         add_code_block(
             slide,
             left=CONTENT_LEFT,
@@ -1458,8 +1874,35 @@ def layout_content_shapes(
         )
         bottom = code_top + code_height
 
-    elif code:
-        code_height = Inches(6.0)
+    elif items and table:
+        bullets_height, table_height = _split_content_height(
+            main_height,
+            ratio=0.36,
+            gap=section_gap,
+            min_first=Inches(2.0),
+            min_second=Inches(2.8),
+        )
+        add_bullet_list(
+            slide,
+            left=CONTENT_LEFT,
+            top=CONTENT_TOP,
+            width=CONTENT_WIDTH,
+            height=bullets_height,
+            items=items,
+            style={**{"font-size": 26, "spacing": 10}, **slide_s},
+        )
+        table_top = CONTENT_TOP + bullets_height + section_gap
+        place_table(table_top, table_height)
+        bottom = table_top + table_height
+
+    elif code and table:
+        code_height, table_height = _split_content_height(
+            main_height,
+            ratio=0.40,
+            gap=section_gap,
+            min_first=Inches(2.4),
+            min_second=Inches(2.8),
+        )
         add_code_block(
             slide,
             left=CONTENT_LEFT,
@@ -1469,7 +1912,25 @@ def layout_content_shapes(
             code_text=code,
             style=code_defaults,
         )
-        bottom = CONTENT_TOP + code_height
+        table_top = CONTENT_TOP + code_height + section_gap
+        place_table(table_top, table_height)
+        bottom = table_top + table_height
+
+    elif table:
+        place_table(CONTENT_TOP, main_height)
+        bottom = CONTENT_TOP + main_height
+
+    elif code:
+        add_code_block(
+            slide,
+            left=CONTENT_LEFT,
+            top=CONTENT_TOP,
+            width=CONTENT_WIDTH,
+            height=main_height,
+            code_text=code,
+            style=code_defaults,
+        )
+        bottom = CONTENT_TOP + main_height
 
     elif items:
         add_bullet_list(
@@ -1477,20 +1938,20 @@ def layout_content_shapes(
             left=CONTENT_LEFT,
             top=CONTENT_TOP,
             width=CONTENT_WIDTH,
-            height=CONTENT_HEIGHT,
+            height=main_height,
             items=items,
             style={**{"font-size": 30, "spacing": 14}, **slide_s},
         )
-        bottom = CONTENT_TOP + CONTENT_HEIGHT
+        bottom = CONTENT_TOP + main_height
 
     if callout:
-        callout_top = bottom + Inches(0.3)
+        callout_top = bottom + section_gap
         add_textbox(
             slide,
             left=CONTENT_LEFT,
             top=callout_top,
             width=CONTENT_WIDTH,
-            height=Inches(0.8),
+            height=callout_height,
             text=callout,
             style={**{"font-size": 26, "bold": True}, **slide_s},
         )

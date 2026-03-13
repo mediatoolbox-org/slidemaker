@@ -25,22 +25,17 @@ from typing import Any, Optional
 
 from pptx import Presentation
 
-from slidemaker.anchors import (
-    DEFAULT_TEMPLATE_PAGE,
-    default_anchor_map,
-    dump_anchor_map,
-    generate_anchor_map,
-    load_anchor_map,
-)
 from slidemaker.core import (
     clone_slide,
     delete_slide,
     layout_content_shapes,
+    remove_generated_content_placeholders,
     replace_placeholders,
     set_notes,
 )
 
-_SYSTEM_STYLES = {".slide", ".code"}
+DEFAULT_TEMPLATE_PAGE = 5
+_SYSTEM_STYLES = {".slide", ".code", ".table", ".table-header", ".table-cell"}
 
 StyleAttrs = dict[str, Any]
 StyleMap = dict[str, StyleAttrs]
@@ -57,6 +52,9 @@ class SlideBuilder:
 
       - ``.slide`` — base style for new text shapes (bullets, callout).
       - ``.code``  — style for code blocks.
+      - ``.table`` — base style for generated tables.
+      - ``.table-header`` — header-row overrides for generated tables.
+      - ``.table-cell`` — body-cell overrides for generated tables.
       - ``#placeholder`` — style applied when replacing a
         ``{{placeholder}}`` in the template.  Falls back to ``.slide``.
 
@@ -73,8 +71,6 @@ class SlideBuilder:
         description: Number of slides in the original template.
       _slide_count:
         description: Number of content slides added so far.
-      _anchors:
-        type: dict[str, Any]
       _styles:
         type: StyleMap
         description: Registered styles (system and placeholder).
@@ -85,7 +81,6 @@ class SlideBuilder:
         template: str | Path,
         style: Optional[StyleMap] = None,
         template_default_page: int = DEFAULT_TEMPLATE_PAGE,
-        anchor_map: Optional[dict[str, Any] | str | Path] = None,
     ) -> None:
         """
         title: Load template, styles, and prepare for building.
@@ -96,55 +91,21 @@ class SlideBuilder:
             type: Optional[StyleMap]
           template_default_page:
             type: int
-          anchor_map:
-            type: Optional[dict[str, Any] | str | Path]
         """
         self._template_path = Path(template)
         self._prs = Presentation(str(self._template_path))
         self._template_default_page = template_default_page
         self._template_slide_count = len(self._prs.slides)
         self._slide_count = 0
-        loaded_anchor_map = load_anchor_map(anchor_map)
-        self._anchors: dict[str, Any] = (
-            loaded_anchor_map
-            if loaded_anchor_map is not None
-            else default_anchor_map(template_default_page)
-        )
         self._styles: StyleMap = {
             ".slide": {},
             ".code": {},
+            ".table": {},
+            ".table-header": {},
+            ".table-cell": {},
         }
         if style:
             self.add_style(style)
-
-    @staticmethod
-    def generate_anchor_map_file(
-        out: str | Path,
-        template: str | Path,
-        template_default_page: int = DEFAULT_TEMPLATE_PAGE,
-        include_shape_catalog: bool = True,
-    ) -> Path:
-        """
-        title: Generate an editable anchor map file for a template.
-        parameters:
-          out:
-            type: str | Path
-          template:
-            type: str | Path
-          template_default_page:
-            type: int
-          include_shape_catalog:
-            type: bool
-        returns:
-          type: Path
-        """
-        template_path = Path(template)
-        anchor_map = generate_anchor_map(
-            template=template_path,
-            template_default_page=template_default_page,
-            include_shape_catalog=include_shape_catalog,
-        )
-        return dump_anchor_map(anchor_map, out)
 
     def add_style(self, style: StyleMap) -> None:
         """
@@ -154,6 +115,9 @@ class SlideBuilder:
 
           - ``.slide`` — base text style.
           - ``.code``  — code block style.
+          - ``.table`` — base generated-table style.
+          - ``.table-header`` — generated-table header style.
+          - ``.table-cell`` — generated-table body-cell style.
           - ``#name``  — placeholder style for ``{{name}}``.
           - Any other name — a named style preset that can be
             referenced by string in ``add_slide(style="name")``.
@@ -182,7 +146,7 @@ class SlideBuilder:
         title: Resolve effective styles for one slide call.
         summary: |-
           Returns a merged StyleMap containing ``.slide``, ``.code``,
-          and any ``#placeholder`` overrides.
+          generated-table styles, and any ``#placeholder`` overrides.
 
           - ``None``  → global styles only.
           - ``str``   → apply a named preset to ``.slide``.
@@ -245,6 +209,7 @@ class SlideBuilder:
         content: dict[str, str | list[str] | None] | None = None,
         items: list[str] | None = None,
         code: str | None = None,
+        table: dict[str, Any] | None = None,
         flow_boxes: list[dict] | None = None,
         callout: str | None = None,
         notes: str = "",
@@ -258,9 +223,9 @@ class SlideBuilder:
 
           - **Replace** — pass ``content`` to replace existing
             ``{{placeholder}}`` text in the cloned template shapes.
-          - **Create** — pass ``items``, ``code``, ``flow_boxes``,
-            or ``callout`` to add new shapes on top of the cloned
-            slide.
+          - **Create** — pass ``items``, ``code``, ``table``,
+            ``flow_boxes``, or ``callout`` to add new shapes on top
+            of the cloned slide.
         parameters:
           content:
             type: dict[str, str | list[str] | None] | None
@@ -274,6 +239,13 @@ class SlideBuilder:
           code:
             type: str | None
             description: Source code for a dark code block.
+          table:
+            type: dict[str, Any] | None
+            description: >-
+              Table specification for a generated table shape. Supports
+              ``columns`` (optional header row), ``rows``, optional
+              ``column_widths``/``row_heights``, optional ``banded_rows``, and
+              optional ``style``/``header_style``/``cell_style``.
           flow_boxes:
             type: list[dict] | None
             description: Flow-diagram boxes (label, desc, optional style).
@@ -286,7 +258,8 @@ class SlideBuilder:
           style:
             type: Optional[str | dict[str, Any]]
             description: >-
-              Per-slide style override.  Supports ``.slide``, ``.code``, and
+              Per-slide style override. Supports ``.slide``, ``.code``,
+              ``.table``, ``.table-header``, ``.table-cell``, and
               ``#placeholder`` keys.
           template_page:
             type: int | None
@@ -307,15 +280,20 @@ class SlideBuilder:
             replace_placeholders(new_slide, content, styles=styles)
 
         # ── Create new shapes with smart layout ───────────────
-        if items or code or flow_boxes or callout:
+        if items or code or table or flow_boxes or callout:
+            remove_generated_content_placeholders(new_slide)
             layout_content_shapes(
                 new_slide,
                 items=items,
                 code=code,
+                table=table,
                 flow_boxes=flow_boxes,
                 callout=callout,
                 slide_style=styles.get(".slide"),
                 code_style=styles.get(".code"),
+                table_style=styles.get(".table"),
+                table_header_style=styles.get(".table-header"),
+                table_cell_style=styles.get(".table-cell"),
             )
 
         if notes:

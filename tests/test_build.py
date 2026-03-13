@@ -10,10 +10,10 @@ from slidemaker import SlideBuilder  # noqa: E402
 
 TEMPLATE = "tests/data/template.pptx"
 
-sb = SlideBuilder(TEMPLATE, default_template_page=4)
+sb = SlideBuilder(TEMPLATE, template_default_page=4)
 
 sb.add_slide(
-    title="The ETL Paradigm",
+    content={"title": "The ETL Paradigm"},
     items=[
         "Extract: Retrieve raw data from a source",
         "Transform: Clean, filter, enrich or reshape",
@@ -23,7 +23,7 @@ sb.add_slide(
 )
 
 sb.add_slide(
-    title="Extract: Date-Range Queries",
+    content={"title": "Extract: Date-Range Queries"},
     items=[
         "Convert date string to Timestamp",
         "Compute end of day with DateOffset",

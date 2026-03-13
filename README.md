@@ -74,19 +74,25 @@ Placeholder matching is **case-insensitive**: `{{TITLE}}`, `{{Title}}`, and
 
 ### New shapes
 
-Pass `items`, `code`, `flow_boxes`, or `callout` to create new shapes on top of
-the cloned slide. These are laid out automatically:
+Pass `items`, `code`, `table`, `flow_boxes`, or `callout` to create new shapes
+on top of the cloned slide. These are laid out automatically:
 
-| Combination      | Layout                           |
-| ---------------- | -------------------------------- |
-| `flow_boxes`     | Flow diagram at content top      |
-| `items` + `code` | Bullets on top, code block below |
-| `items` only     | Full content area                |
-| `code` only      | Full content area                |
-| `callout`        | Placed below other content       |
+| Combination       | Layout                           |
+| ----------------- | -------------------------------- |
+| `flow_boxes`      | Flow diagram at content top      |
+| `items` + `code`  | Bullets on top, code block below |
+| `items` + `table` | Bullets on top, table below      |
+| `code` + `table`  | Code block on top, table below   |
+| `items` only      | Full content area                |
+| `code` only       | Full content area                |
+| `table` only      | Full content area                |
+| `callout`         | Placed below other content       |
 
 Both modes (placeholder replacement and new shapes) can be used together on the
 same slide.
+
+`table` can be combined with either `items` or `code`, but not both, and it
+cannot be combined with `flow_boxes`.
 
 ## SlideBuilder API
 
@@ -101,7 +107,6 @@ SlideBuilder(
     template: str | Path,
     style: dict[str, dict] | None = None,
     template_default_page: int = 5,
-    anchor_map: dict | str | Path | None = None,
 )
 ```
 
@@ -109,7 +114,6 @@ SlideBuilder(
 - `style`: global style definitions.
 - `template_default_page`: 1-based index of the default template slide to clone
   when `template_page` is not specified.
-- `anchor_map`: optional anchor map for content placement.
 
 ### Adding slides
 
@@ -118,6 +122,7 @@ sb.add_slide(
     content={"title": "Slide Title", "body": ["Point A", "Point B"]},
     items=None,
     code=None,
+    table=None,
     flow_boxes=None,
     callout=None,
     notes="",
@@ -129,6 +134,7 @@ sb.add_slide(
 - `content`: dict of placeholder replacements (`{{key}}` in template).
 - `items`: bullet points (creates new shapes).
 - `code`: source code block (creates new shape).
+- `table`: generated table definition (creates new shape).
 - `flow_boxes`: flow diagram boxes (creates new shapes).
 - `callout`: bold callout text below other content.
 - `notes`: speaker notes.
@@ -161,6 +167,9 @@ Removes all original template slides and writes the final deck.
 
 - `.slide` — base style for all new text shapes and placeholder fallback.
 - `.code` — code block style.
+- `.table` — base style for generated tables.
+- `.table-header` — header-row overrides for generated tables.
+- `.table-cell` — body-cell overrides for generated tables.
 - `#placeholder` — style for a specific `{{placeholder}}`. Falls back to
   `.slide`.
 - Any other name — a named preset (e.g. `"dense"`) that can be applied via
@@ -186,6 +195,9 @@ style={
     "use": "dense",
     ".slide": {"font-size": 24},
     ".code": {"line-numbers": True},
+    ".table": {"font-size": 20, "padding": "6pt"},
+    ".table-header": {"fill-color": "#193952", "font-color": "#FFFFFF"},
+    ".table-cell": {"font-color": "#0B1F33"},
     "#title": {"font-size": 48, "letter-spacing": 90},
 }
 ```
@@ -218,6 +230,17 @@ style={
 - `bg-color` (or `fill-color`)
 - `line-numbers`: bool
 
+### Table keys
+
+- `columns`: optional header-row cell values
+- `rows`: body rows as `list[list[str | None]]`
+- `column_widths`: optional column widths; numeric values are inches
+- `row_heights`: optional row heights; numeric values are inches
+- `banded_rows`: bool
+- `style`: per-table override merged into `.table`
+- `header_style`: per-table override merged into `.table-header`
+- `cell_style`: per-table override merged into `.table-cell`
+
 ### Shape keys (flow boxes)
 
 - `fill-color`
@@ -237,6 +260,21 @@ flow_boxes=[
         },
     },
 ]
+```
+
+## Table Format
+
+```python
+table={
+    "columns": ["Field", "Type", "Notes"],
+    "rows": [
+        ["_id", "ObjectId", "Primary key"],
+        ["createdAt", "datetime", "UTC timestamp"],
+        ["tags", "list[str]", "Optional labels"],
+    ],
+    "column_widths": [2.2, 2.0, 5.8],
+    "banded_rows": True,
+}
 ```
 
 ## Inline Markdown in Bullets
@@ -259,6 +297,7 @@ Every `add_slide` call accepts `notes="..."` for speaker notes.
 `slidemaker.core` provides lower-level helpers:
 
 - text: `add_textbox`, `set_textbox_text`, `add_bullet_list`, `add_code_block`
+- tables: `add_table`
 - layout: `layout_content_shapes`
 - placeholders: `replace_placeholders`
 - shapes/flow: `add_shape_rect`, `add_flow_boxes`

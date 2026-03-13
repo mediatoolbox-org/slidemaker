@@ -12,11 +12,11 @@ from slidemaker import SlideBuilder  # noqa: E402
 
 TEMPLATE = "tests/data/template.pptx"
 
-sb = SlideBuilder(TEMPLATE, default_template_page=4)
+sb = SlideBuilder(TEMPLATE, template_default_page=4)
 
 # ── Flow diagram slide ──────────────────────────────────────
 sb.add_slide(
-    title="The ETL Paradigm",
+    content={"title": "The ETL Paradigm"},
     flow_boxes=[
         {
             "label": "EXTRACT",
@@ -40,7 +40,7 @@ sb.add_slide(
 
 # ── Bullets + code block slide ──────────────────────────────
 sb.add_slide(
-    title="Extract: Date-Range Queries in MongoDB",
+    content={"title": "Extract: Date-Range Queries in MongoDB"},
     items=[
         "Convert date string to Timestamp with pd.to_datetime",
         "Compute end of day with pd.DateOffset(days=1)",
@@ -60,7 +60,7 @@ results = list(collection.find(query))""",
 
 # ── Bullets + code block slide ──────────────────────────────
 sb.add_slide(
-    title="Transform: Randomised Group Assignment",
+    content={"title": "Transform: Randomised Group Assignment"},
     items=[
         "random.seed(42) makes the split reproducible",
         "random.shuffle(observations) reorders in place",
@@ -81,7 +81,7 @@ for doc in observations[mid:]:
 
 # ── Bullets only slide ──────────────────────────────────────
 sb.add_slide(
-    title="Transform: Exporting Treatment Emails to CSV",
+    content={"title": "Transform: Exporting Treatment Emails to CSV"},
     items=[
         "Convert assigned documents to DataFrame",
         'Add a tracking column "tag" with a fixed value',
@@ -94,7 +94,7 @@ sb.add_slide(
 
 # ── Bullets + code block slide ──────────────────────────────
 sb.add_slide(
-    title="Load: Updating Documents with update_one",
+    content={"title": "Load: Updating Documents with update_one"},
     items=[
         "update_one(filter, update) modifies one document",
         'Filter identifies the target: {"_id": doc["_id"]}',
@@ -112,7 +112,7 @@ sb.add_slide(
 
 # ── Bullets + code block slide ──────────────────────────────
 sb.add_slide(
-    title="Python Classes: Bundling Data and Behaviour",
+    content={"title": "Python Classes: Bundling Data and Behaviour"},
     items=[
         "A class groups attributes and methods into one object",
         "__init__ runs at creation time and sets instance attributes via self",
@@ -133,7 +133,7 @@ print(g.greet())""",
 
 # ── Flow diagram slide ──────────────────────────────────────
 sb.add_slide(
-    title="Building the MongoRepository Class",
+    content={"title": "Building the MongoRepository Class"},
     flow_boxes=[
         {
             "label": "__init__",
@@ -162,7 +162,7 @@ sb.add_slide(
 
 # ── Bullets only slide ──────────────────────────────────────
 sb.add_slide(
-    title="Inspecting Unfamiliar Objects with dir",
+    content={"title": "Inspecting Unfamiliar Objects with dir"},
     items=[
         "dir(obj) lists all attributes and methods",
         'Filter internals: [a for a in dir(obj) if not a.startswith("_")]',
@@ -170,6 +170,22 @@ sb.add_slide(
         "Check raw_result for the full MongoDB response",
     ],
     notes="Object inspection.",
+)
+
+# ── Table slide ──────────────────────────────────────────────
+sb.add_slide(
+    content={"title": "MongoDB Field Reference"},
+    table={
+        "columns": ["Field", "Type", "Notes"],
+        "rows": [
+            ["_id", "ObjectId", "Primary key"],
+            ["createdAt", "datetime", "Stored in UTC"],
+            ["admissionsQuiz", "string", "Completion status"],
+        ],
+        "column_widths": [2.3, 2.0, 5.7],
+        "banded_rows": True,
+    },
+    notes="Table layout smoke test.",
 )
 
 sb.save("/tmp/test_rich_output.pptx")
