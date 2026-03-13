@@ -3,10 +3,11 @@ from __future__ import annotations
 import unittest
 
 from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches, Pt
 
-from tests._util import TEMPLATE, new_slide, rgb_hex, slide_texts
+from tests._util import SAMPLE_IMAGE, TEMPLATE, new_slide, rgb_hex, slide_texts
 
 from slidemaker import core
 
@@ -67,7 +68,6 @@ class CorePptxTests(unittest.TestCase):
             },
         )
         paragraph = textbox.text_frame.paragraphs[0]
-        run = paragraph.runs[0]
         self.assertEqual(textbox.text, "MONGODB")
         self.assertEqual(paragraph.font.size.pt, 26)
         self.assertEqual(paragraph.font.name, "Aptos")
@@ -150,6 +150,44 @@ class CorePptxTests(unittest.TestCase):
         self.assertEqual(rgb_hex(code_background.fill.fore_color.rgb), "193952")
         self.assertIn(" 1  A = 1", code_text.text)
         self.assertIn(" 2  B = 2", code_text.text)
+
+    def test_add_image_supports_contain_and_stretch(self) -> None:
+        _, slide = new_slide()
+
+        contained = core.add_image(
+            slide,
+            Inches(1),
+            Inches(1),
+            Inches(4),
+            Inches(4),
+            SAMPLE_IMAGE,
+        )
+        self.assertEqual(contained.width, Inches(4))
+        self.assertEqual(contained.height, Inches(2))
+        self.assertEqual(contained.left, Inches(1))
+        self.assertEqual(contained.top, Inches(2))
+
+        stretched = core.add_image(
+            slide,
+            Inches(6),
+            Inches(1),
+            Inches(3),
+            Inches(2),
+            SAMPLE_IMAGE,
+            fit="stretch",
+        )
+        self.assertEqual(stretched.width, Inches(3))
+        self.assertEqual(stretched.height, Inches(2))
+        self.assertEqual(stretched.left, Inches(6))
+        self.assertEqual(stretched.top, Inches(1))
+
+        with self.assertRaisesRegex(FileNotFoundError, "missing.png"):
+            core.add_image(slide, 0, 0, 1, 1, "missing.png")
+
+        with self.assertRaisesRegex(
+            ValueError, "image fit must be 'contain' or 'stretch'"
+        ):
+            core.add_image(slide, 0, 0, 1, 1, SAMPLE_IMAGE, fit="cover")
 
     def test_add_table_variants_and_validation(self) -> None:
         _, slide = new_slide()
@@ -372,6 +410,19 @@ class CorePptxTests(unittest.TestCase):
 
         core.delete_slide(prs, 0)
         self.assertEqual(len(prs.slides), original_count)
+
+    def test_layout_content_shapes_with_image_adds_picture(self) -> None:
+        prs = Presentation(str(TEMPLATE))
+        slide = prs.slides[3]
+        core.layout_content_shapes(
+            slide,
+            image={"path": SAMPLE_IMAGE, "caption": "Sample image"},
+        )
+
+        self.assertTrue(
+            any(shape.shape_type == MSO_SHAPE_TYPE.PICTURE for shape in slide.shapes)
+        )
+        self.assertIn("Sample image", "\n".join(slide_texts(slide)))
 
 
 def clone_texts(slide) -> list[str]:

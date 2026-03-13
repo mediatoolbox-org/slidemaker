@@ -74,8 +74,8 @@ Placeholder matching is **case-insensitive**: `{{TITLE}}`, `{{Title}}`, and
 
 ### New shapes
 
-Pass `items`, `code`, `table`, `flow_boxes`, or `callout` to create new shapes
-on top of the cloned slide. These are laid out automatically:
+Pass `items`, `code`, `table`, `image`, `flow_boxes`, or `callout` to create new
+shapes on top of the cloned slide. These are laid out automatically:
 
 | Combination       | Layout                           |
 | ----------------- | -------------------------------- |
@@ -83,16 +83,21 @@ on top of the cloned slide. These are laid out automatically:
 | `items` + `code`  | Bullets on top, code block below |
 | `items` + `table` | Bullets on top, table below      |
 | `code` + `table`  | Code block on top, table below   |
+| `items` + `image` | Bullets on top, image below      |
+| `code` + `image`  | Code block on top, image below   |
 | `items` only      | Full content area                |
 | `code` only       | Full content area                |
 | `table` only      | Full content area                |
+| `image` only      | Full content area                |
 | `callout`         | Placed below other content       |
 
 Both modes (placeholder replacement and new shapes) can be used together on the
 same slide.
 
 `table` can be combined with either `items` or `code`, but not both, and it
-cannot be combined with `flow_boxes`.
+cannot be combined with `flow_boxes`. `image` can be combined with either
+`items` or `code`, but not both, and it cannot be combined with `table` or
+`flow_boxes`.
 
 ## SlideBuilder API
 
@@ -123,6 +128,7 @@ sb.add_slide(
     items=None,
     code=None,
     table=None,
+    image=None,
     flow_boxes=None,
     callout=None,
     notes="",
@@ -135,6 +141,7 @@ sb.add_slide(
 - `items`: bullet points (creates new shapes).
 - `code`: source code block (creates new shape).
 - `table`: generated table definition (creates new shape).
+- `image`: image path or image spec (creates new shape).
 - `flow_boxes`: flow diagram boxes (creates new shapes).
 - `callout`: bold callout text below other content.
 - `notes`: speaker notes.
@@ -241,6 +248,13 @@ style={
 - `header_style`: per-table override merged into `.table-header`
 - `cell_style`: per-table override merged into `.table-cell`
 
+### Image keys
+
+- `path` / `src`: image file path
+- `caption`: optional caption below the image
+- `fit`: `"contain"` (default) or `"stretch"`
+- `caption_style`: optional caption text override merged into `.slide`
+
 ### Shape keys (flow boxes)
 
 - `fill-color`
@@ -277,6 +291,16 @@ table={
 }
 ```
 
+## Image Format
+
+```python
+image={
+    "path": "artifacts/confusion_matrix.png",
+    "caption": "Validation confusion matrix",
+    "fit": "contain",
+}
+```
+
 ## Inline Markdown in Bullets
 
 Bullet items support inline bold with `**...**`:
@@ -297,6 +321,7 @@ Every `add_slide` call accepts `notes="..."` for speaker notes.
 `slidemaker.core` provides lower-level helpers:
 
 - text: `add_textbox`, `set_textbox_text`, `add_bullet_list`, `add_code_block`
+- media: `add_image`
 - tables: `add_table`
 - layout: `layout_content_shapes`
 - placeholders: `replace_placeholders`

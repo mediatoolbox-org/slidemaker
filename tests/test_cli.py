@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from pptx import Presentation
 
-from tests._util import TEMPLATE
+from tests._util import SAMPLE_IMAGE, TEMPLATE
 
 from slidemaker import SlideBuilder
 
@@ -110,6 +110,7 @@ class SlideBuilderTests(unittest.TestCase):
                 items=["One"],
                 code="print('x')",
                 table={"columns": ["A"], "rows": [["1"]]},
+                image={"path": SAMPLE_IMAGE, "caption": "Chart"},
                 flow_boxes=[{"label": "X"}],
                 callout="Done",
                 notes="speaker note",
@@ -130,6 +131,7 @@ class SlideBuilderTests(unittest.TestCase):
         self.assertEqual(kwargs["table_style"], style[".table"])
         self.assertEqual(kwargs["table_header_style"], style[".table-header"])
         self.assertEqual(kwargs["table_cell_style"], style[".table-cell"])
+        self.assertEqual(kwargs["image"], {"path": SAMPLE_IMAGE, "caption": "Chart"})
         set_notes.assert_called_once_with(fake_slide, "speaker note")
         self.assertEqual(builder._slide_count, 1)
 

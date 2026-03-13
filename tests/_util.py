@@ -11,6 +11,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 TEMPLATE = ROOT / "tests" / "data" / "template.pptx"
+SAMPLE_IMAGE = ROOT / "tests" / "data" / "sample.png"
 
 
 def new_slide():
