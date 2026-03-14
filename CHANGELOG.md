@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/mediatoolbox-org/slidemaker/compare/1.4.1...1.5.0) (2026-03-14)
+
+
+### Features
+
+* Add support for generating images with openai ([#5](https://github.com/mediatoolbox-org/slidemaker/issues/5)) ([cf3b383](https://github.com/mediatoolbox-org/slidemaker/commit/cf3b3836fb7bb3994d5ed08ed126ba7da53ec04b))
+
 ## [1.4.1](https://github.com/mediatoolbox-org/slidemaker/compare/1.4.0...1.4.1) (2026-03-13)
 
 
