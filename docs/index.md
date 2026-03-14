@@ -9,6 +9,8 @@ replacement, content layout, style resolution, and final deck assembly.
 
 - `src/slidemaker/core.py`: low-level text, shape, layout, and slide utilities.
 - `src/slidemaker/cli.py`: `SlideBuilder` high-level API.
+- `src/slidemaker/media.py`: image URL resolution, caching, and prompt-based
+  generation helpers.
 
 ## Quick Start
 

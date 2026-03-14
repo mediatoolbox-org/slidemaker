@@ -118,6 +118,8 @@ SlideBuilder(
     template: str | Path,
     style: dict[str, dict] | None = None,
     template_default_page: int = 5,
+    image_provider=None,
+    media_cache_dir: str | Path | None = None,
 )
 ```
 
@@ -125,6 +127,11 @@ SlideBuilder(
 - `style`: global style definitions.
 - `template_default_page`: 1-based index of the default template slide to clone
   when `template_page` is not specified.
+- `image_provider`: optional prompt-based image provider object or config dict.
+  Dict form currently supports OpenAI settings such as `model`, `api_key`, and
+  `api_key_env`.
+- `media_cache_dir`: optional cache directory for downloaded/generated images.
+  Defaults to `.slidemaker-cache` next to the template.
 
 ### Adding slides
 
@@ -149,7 +156,8 @@ sb.add_slide(
 - `markdown`: free-form markdown block (creates new shape).
 - `code`: source code block (creates new shape).
 - `table`: generated table definition (creates new shape).
-- `image`: image path or image spec (creates new shape).
+- `image`: local image path or image spec, including URL or prompt-backed images
+  (creates new shape).
 - `flow_boxes`: flow diagram boxes (creates new shapes).
 - `callout`: bold callout text below other content.
 - `notes`: speaker notes.
@@ -260,10 +268,19 @@ These keys also apply to bullet paragraphs inside `markdown` blocks.
 
 ### Image keys
 
-- `path` / `src`: image file path
+- `path` / `src`: local image file path
+- `url`: remote image URL to download into the media cache
+- `prompt`: prompt to generate an image via the configured image provider
 - `caption`: optional caption below the image
 - `fit`: `"contain"` (default) or `"stretch"`
 - `caption_style`: optional caption text override merged into `.slide`
+- `size`: optional prompt-generation size such as `"1024x1024"`
+- `quality`: optional prompt-generation quality passed to OpenAI
+- `background`: optional prompt-generation background passed to OpenAI
+- `output_format`: optional prompt-generation output format, defaults to `png`
+- `output_compression`: optional prompt-generation compression integer
+
+Exactly one of `path` / `src`, `url`, or `prompt` must be provided.
 
 ### Shape keys (flow boxes)
 
@@ -309,6 +326,34 @@ image={
     "caption": "Validation confusion matrix",
     "fit": "contain",
 }
+```
+
+```python
+image={
+    "url": "https://example.com/assets/confusion-matrix.png",
+    "caption": "Validation confusion matrix",
+}
+```
+
+```python
+from slidemaker import OpenAIImageProvider, SlideBuilder
+
+sb = SlideBuilder(
+    "my_template.pptx",
+    image_provider=OpenAIImageProvider(
+        model="gpt-image-1",
+        api_key_env="OPENAI_API_KEY",
+    ),
+)
+
+sb.add_slide(
+    content={"title": "Generated Visual"},
+    image={
+        "prompt": "A clean isometric illustration of a machine learning pipeline",
+        "size": "1024x1024",
+        "caption": "Generated with OpenAI",
+    },
+)
 ```
 
 ## Markdown Format

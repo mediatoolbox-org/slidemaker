@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from pptx import Presentation
+from slidemaker.media import MediaResolver, build_image_provider
 
 from slidemaker.core import (
     clone_slide,
@@ -74,6 +75,8 @@ class SlideBuilder:
       _styles:
         type: StyleMap
         description: Registered styles (system and placeholder).
+      _media_resolver:
+        description: Resolves image URLs and prompts to local cached files.
     """
 
     def __init__(
@@ -81,6 +84,8 @@ class SlideBuilder:
         template: str | Path,
         style: Optional[StyleMap] = None,
         template_default_page: int = DEFAULT_TEMPLATE_PAGE,
+        image_provider: Any = None,
+        media_cache_dir: str | Path | None = None,
     ) -> None:
         """
         title: Load template, styles, and prepare for building.
@@ -91,6 +96,17 @@ class SlideBuilder:
             type: Optional[StyleMap]
           template_default_page:
             type: int
+          image_provider:
+            type: Any
+            description: >-
+              Optional prompt-based image provider object or provider config
+              dictionary. Dict form currently supports ``{"provider": "openai",
+              "model": ..., "api_key": ...}``.
+          media_cache_dir:
+            type: str | Path | None
+            description: >-
+              Directory used to cache downloaded or generated images. Defaults
+              to ``.slidemaker-cache`` next to the template.
         """
         self._template_path = Path(template)
         self._prs = Presentation(str(self._template_path))
@@ -104,8 +120,30 @@ class SlideBuilder:
             ".table-header": {},
             ".table-cell": {},
         }
+        self._media_resolver = MediaResolver(
+            image_provider=build_image_provider(image_provider),
+            cache_dir=(
+                self._template_path.parent / ".slidemaker-cache"
+                if media_cache_dir is None
+                else media_cache_dir
+            ),
+        )
         if style:
             self.add_style(style)
+
+    def _resolve_image_spec(
+        self,
+        image: str | Path | dict[str, Any] | None,
+    ) -> str | Path | dict[str, Any] | None:
+        """
+        title: Resolve user-facing image specs before layout.
+        parameters:
+          image:
+            type: str | Path | dict[str, Any] | None
+        returns:
+          type: str | Path | dict[str, Any] | None
+        """
+        return self._media_resolver.resolve_image(image)
 
     def add_style(self, style: StyleMap) -> None:
         """
@@ -254,10 +292,11 @@ class SlideBuilder:
           image:
             type: str | Path | dict[str, Any] | None
             description: >-
-              Image path or image specification for a generated picture shape.
-              Dict form supports ``path``/``src``, optional ``caption``,
-              optional ``fit`` (``contain`` or ``stretch``), and optional
-              ``caption_style``.
+              Image source or image specification for a generated picture
+              shape. Dict form supports exactly one of ``path``/``src`` for a
+              local file, ``url`` for download, or ``prompt`` for provider-
+              backed generation, plus optional ``caption``, optional ``fit``
+              (``contain`` or ``stretch``), and optional ``caption_style``.
           flow_boxes:
             type: list[dict] | None
             description: Flow-diagram boxes (label, desc, optional style).
@@ -280,6 +319,7 @@ class SlideBuilder:
               ``template_default_page`` from the constructor.
         """
         styles = self._resolve_styles(style)
+        resolved_image = self._resolve_image_spec(image)
         page = (
             template_page if template_page is not None else self._template_default_page
         )
@@ -300,7 +340,7 @@ class SlideBuilder:
                 markdown=markdown,
                 code=code,
                 table=table,
-                image=image,
+                image=resolved_image,
                 flow_boxes=flow_boxes,
                 callout=callout,
                 slide_style=styles.get(".slide"),

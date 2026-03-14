@@ -82,6 +82,12 @@ class SlideBuilderTests(unittest.TestCase):
         with self.assertRaisesRegex(KeyError, "unknown style name"):
             builder._resolve_styles({"use": "missing", ".slide": {"font-size": 10}})
 
+        nested_with_string_use = builder._resolve_styles(
+            {"use": "dense", ".slide": {"font-size": 18}}
+        )
+        self.assertEqual(nested_with_string_use[".slide"]["spacing"], 8)
+        self.assertEqual(nested_with_string_use[".slide"]["font-size"], 18)
+
     def test_add_slide_dispatches_helpers(self) -> None:
         builder = SlideBuilder(TEMPLATE)
         fake_slide = object()
@@ -136,6 +142,51 @@ class SlideBuilderTests(unittest.TestCase):
         self.assertEqual(kwargs["image"], {"path": SAMPLE_IMAGE, "caption": "Chart"})
         set_notes.assert_called_once_with(fake_slide, "speaker note")
         self.assertEqual(builder._slide_count, 1)
+
+    def test_add_slide_resolves_image_before_layout(self) -> None:
+        builder = SlideBuilder(TEMPLATE)
+        fake_slide = object()
+
+        with (
+            patch.object(
+                builder,
+                "_resolve_image_spec",
+                return_value={"path": SAMPLE_IMAGE, "caption": "Generated"},
+            ) as resolve_image,
+            patch("slidemaker.cli.clone_slide", return_value=fake_slide),
+            patch("slidemaker.cli.remove_generated_content_placeholders"),
+            patch("slidemaker.cli.layout_content_shapes") as layout_content_shapes,
+        ):
+            builder.add_slide(
+                image={"prompt": "an abstract wave", "caption": "Generated"}
+            )
+
+        resolve_image.assert_called_once_with(
+            {"prompt": "an abstract wave", "caption": "Generated"}
+        )
+        self.assertEqual(
+            layout_content_shapes.call_args.kwargs["image"],
+            {"path": SAMPLE_IMAGE, "caption": "Generated"},
+        )
+
+    def test_add_slide_does_not_mutate_deck_when_image_resolution_fails(self) -> None:
+        builder = SlideBuilder(TEMPLATE)
+
+        with (
+            patch.object(
+                builder,
+                "_resolve_image_spec",
+                side_effect=ValueError("image prompt requires an image_provider"),
+            ),
+            patch("slidemaker.cli.clone_slide") as clone_slide,
+        ):
+            with self.assertRaisesRegex(
+                ValueError, "image prompt requires an image_provider"
+            ):
+                builder.add_slide(image={"prompt": "night city skyline"})
+
+        clone_slide.assert_not_called()
+        self.assertEqual(builder._slide_count, 0)
 
     def test_add_slide_skips_optional_paths(self) -> None:
         builder = SlideBuilder(TEMPLATE)
